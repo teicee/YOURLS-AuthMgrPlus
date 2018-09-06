@@ -38,7 +38,6 @@ class AuthmgrCapability {
 	const ViewStats     = 'ViewStats';
 }	
 
-
 /********** Add hooks to intercept functionality in CORE ********/
 
 yourls_add_action( 'load_template_infos', 'authmgr_intercept_stats' );
@@ -69,29 +68,29 @@ yourls_add_action( 'auth_successful', 'authmgr_intercept_admin' );
 function authmgr_intercept_admin() {
 	authmgr_require_capability( AuthmgrCapability::ShowAdmin );
 
-    // we use this GET param to send up a feedback notice to user
-    if ( isset( $_GET['access'] ) && $_GET['access']=='denied' ) {
-            yourls_add_notice('Access Denied');
-    }
+	// we use this GET param to send up a feedback notice to user
+	if ( isset( $_GET['access'] ) && $_GET['access']=='denied' ) {
+		yourls_add_notice('Access Denied');
+	}
 
-        $action_capability_map = array(
-      		'add' => AuthmgrCapability::AddURL,
-        	'delete' => AuthmgrCapability::DeleteURL,
-        	'edit_display' => AuthmgrCapability::EditURL,
-        	'edit_save' => AuthmgrCapability::EditURL,
-        	'activate' => AuthmgrCapability::ManagePlugins,
-        	'deactivate' => AuthmgrCapability::ManagePlugins,
+	$action_capability_map = array(
+		'add' => AuthmgrCapability::AddURL,
+		'delete' => AuthmgrCapability::DeleteURL,
+		'edit_display' => AuthmgrCapability::EditURL,
+		'edit_save' => AuthmgrCapability::EditURL,
+		'activate' => AuthmgrCapability::ManagePlugins,
+		'deactivate' => AuthmgrCapability::ManagePlugins,
 	);
 	// allow manipulation of this list
 	yourls_apply_filter( authmgr_action_capability_map, $action_capability_map);
 
 	// intercept requests for plugin management
 	if ( isset( $_REQUEST['plugin'] ) ) {
-                $action_keyword = $_REQUEST['action'];
-                $cap_needed = $action_capability_map[$action_keyword];
-                if ( $cap_needed !== NULL && authmgr_have_capability( $cap_needed ) !== true) {
-                        yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
-                }
+		$action_keyword = $_REQUEST['action'];
+		$cap_needed = $action_capability_map[$action_keyword];
+		if ( $cap_needed !== NULL && authmgr_have_capability( $cap_needed ) !== true) {
+			yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
+		}
 	}
 
 	// Key actions like Add/Edit/Delete are AJAX requests
@@ -116,8 +115,8 @@ yourls_add_filter( 'logout_link', 'authmgr_html_append_roles' );
  * currently available, just by mousing over the username in the logout link.
  */
 function authmgr_html_append_roles( $original ) {
-        $authenticated = yourls_is_valid_user();
-        if ( $authenticated === true ) {
+	$authenticated = yourls_is_valid_user();
+	if ( $authenticated === true ) {
 		$listcaps = implode(', ', authmgr_enumerate_current_capabilities());
 		return '<div title="'.$listcaps.'">'.$original.'</div>';
 	} else {
@@ -139,7 +138,7 @@ function authmgr_require_capability( $capability ) {
 			die('Require permissions to show admin interface.');
 		}
 		// Otherwise, render errors in admin interface
-                yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
+		yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
 		die();
 	}
 }
@@ -150,13 +149,13 @@ function authmgr_require_capability( $capability ) {
 function authmgr_enumerate_current_capabilities() {
 	$current_capabilities = array();
 	$all_capabilities = authmgr_enumerate_all_capabilities();
-	
+
 	foreach ( $all_capabilities as $cap ) {
 		if ( authmgr_have_capability( $cap ) ) {
 			$current_capabilities[] = $cap;
 		}
 	}
-	
+
 	return $current_capabilities;
 }
 
@@ -181,7 +180,7 @@ function authmgr_enumerate_all_capabilities() {
  * only change 'false' to 'true', never the other way around.
  */
 function authmgr_have_capability( $capability ) {
-        return yourls_apply_filter( AUTHMGR_ALLOW, false, $capability);
+	return yourls_apply_filter( AUTHMGR_ALLOW, false, $capability);
 }
 
 /******************* FILTERS THAT GRANT CAPABILITIES *****************************/
@@ -225,7 +224,7 @@ function authmgr_check_user_capability( $original, $capability ) {
 
 	// Enumerate the capabilities available to this user through roles
 	$user_caps = array();
-	
+
 	foreach ( $authmgr_role_capabilities as $rolename => $rolecaps ) {
 			if ( authmgr_user_has_role( YOURLS_USER, $rolename ) ) {
 					$user_caps = array_merge( $user_caps, $rolecaps );
@@ -335,14 +334,14 @@ function authmgr_environment_check() {
 				AuthmgrCapability::EditURL,
 				AuthmgrCapability::ManagePlugins,
 				AuthmgrCapability::API,
-                                AuthmgrCapability::ViewStats,
+				AuthmgrCapability::ViewStats,
 			),
 			AuthmgrRoles::Editor => array(
 				AuthmgrCapability::ShowAdmin,
 				AuthmgrCapability::AddURL,
 				AuthmgrCapability::EditURL,
 				AuthmgrCapability::DeleteURL,
-                                AuthmgrCapability::ViewStats,
+				AuthmgrCapability::ViewStats,
 			),
 			AuthmgrRoles::Contributor => array(
 				AuthmgrCapability::ShowAdmin,
@@ -382,12 +381,11 @@ function authmgr_environment_check() {
  * Borrowed from:
  * http://stackoverflow.com/questions/594112/matching-an-ip-to-a-cidr-mask-in-php5
  */
-function authmgr_cidr_match($ip, $range)
-{
-    list ($subnet, $bits) = split('/', $range);
-    $ip = ip2long($ip);
-    $subnet = ip2long($subnet);
-    $mask = -1 << (32 - $bits);
-    $subnet &= $mask; # nb: in case the supplied subnet wasn't correctly aligned
-    return ($ip & $mask) == $subnet;
+function authmgr_cidr_match($ip, $range) {
+	list ($subnet, $bits) = split('/', $range);
+	$ip = ip2long($ip);
+	$subnet = ip2long($subnet);
+	$mask = -1 << (32 - $bits);
+	$subnet &= $mask; # nb: in case the supplied subnet wasn't correctly aligned
+	return ($ip & $mask) == $subnet;
 }
