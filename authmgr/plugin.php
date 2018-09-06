@@ -3,7 +3,7 @@
 Plugin Name: Authorization Manager
 Plugin URI:  https://github.com/nicwaller/yourls-authmgr-plugin
 Description: Restrict classes of users to specific functions
-Version:     0.9.2
+Version:     0.9.3
 Author:      nicwaller
 Author URI:  https://github.com/nicwaller
 */
@@ -43,12 +43,16 @@ class AuthmgrCapability {
 
 yourls_add_action( 'load_template_infos', 'authmgr_intercept_stats' );
 function authmgr_intercept_stats() {
-	authmgr_require_capability( AuthmgrCapability::ViewStats );
+	if ( YOURLS_PRIVATE_INFOS === true ) {
+		authmgr_require_capability( AuthmgrCapability::ViewStats );
+	}
 }
 
 yourls_add_action( 'api', 'authmgr_intercept_api' );
 function authmgr_intercept_api() {
-	authmgr_require_capability( AuthmgrCapability::API );
+	if ( YOURLS_PRIVATE_API === true ) {
+		authmgr_require_capability( AuthmgrCapability::API );
+	}
 }
 
 
@@ -65,10 +69,10 @@ yourls_add_action( 'auth_successful', 'authmgr_intercept_admin' );
 function authmgr_intercept_admin() {
 	authmgr_require_capability( AuthmgrCapability::ShowAdmin );
 
-        // we use this GET param to send up a feedback notice to user
-        if ( isset( $_GET['access'] ) && $_GET['access']=='denied' ) {
-                yourls_add_notice('Access Denied');
-        }
+    // we use this GET param to send up a feedback notice to user
+    if ( isset( $_GET['access'] ) && $_GET['access']=='denied' ) {
+            yourls_add_notice('Access Denied');
+    }
 
         $action_capability_map = array(
       		'add' => AuthmgrCapability::AddURL,
@@ -78,6 +82,8 @@ function authmgr_intercept_admin() {
         	'activate' => AuthmgrCapability::ManagePlugins,
         	'deactivate' => AuthmgrCapability::ManagePlugins,
 	);
+	// allow manipulation of this list
+	yourls_apply_filter( authmgr_action_capability_map, $action_capability_map);
 
 	// intercept requests for plugin management
 	if ( isset( $_REQUEST['plugin'] ) ) {
