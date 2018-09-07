@@ -3,7 +3,7 @@
 Plugin Name: Authorization Manager
 Plugin URI:  https://github.com/nicwaller/yourls-authmgr-plugin
 Description: Restrict classes of users to specific functions
-Version:     0.11.0
+Version:     0.11.1
 Author:      nicwaller
 Author URI:  https://github.com/nicwaller
 */
@@ -129,7 +129,9 @@ function authmgr_intercept_admin() {
 /* 
  * Cosmetic filter: removes disallowed plugins from link list
 */
-yourls_add_filter( 'admin_sublinks', 'authmgr_admin_sublinks' );
+if( yourls_is_admin() ) {
+	yourls_add_filter( 'admin_sublinks', 'authmgr_admin_sublinks' );
+}
 function authmgr_admin_sublinks( $links ) {
 	
 	global $authmgr_allowed_plugin_pages;
