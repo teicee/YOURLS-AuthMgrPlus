@@ -13,44 +13,40 @@ if( !defined( 'YOURLS_ABSPATH' ) ) die();
 
 /****************** SET UP CONSTANTS ******************/
 
-/**
- * This plugin uses filter chains to evaluate whether specific actions
- * should be allowed to proceed. The filter names are defined here.
- */
-define( 'AUTHMGR_ALLOW',   'filter_authmgr_allow'   );
-define( 'AUTHMGR_HASROLE', 'filter_authmgr_hasrole' );
-
-// Define constants used for naming roles (but they don't work in config.php)
 class AuthmgrRoles {
 	const Administrator = 'Administrator';
 	const Editor        = 'Editor';
 	const Contributor   = 'Contributor';
 }
 
-// Define constants used for naming capabilities
 class AuthmgrCapability {
-	const ShowAdmin     = 'ShowAdmin'; // only display admin panel
+	const ShowAdmin     = 'ShowAdmin';
 	const AddURL        = 'AddURL';
 	const DeleteURL     = 'DeleteURL';
 	const EditURL       = 'EditURL';
 	const ManagePlugins = 'ManagePlugins';
 	const API           = 'API';
+	const APIu          = 'APIu';
 	const ViewStats     = 'ViewStats';
 }	
 
-/********** Add hooks to intercept functionality in CORE ********/
+/********** Add hooks to intercept functionality in CORE **********/
 
 yourls_add_action( 'load_template_infos', 'authmgr_intercept_stats' );
 function authmgr_intercept_stats() {
-	if ( YOURLS_PRIVATE_INFOS === true ) {
+	if ( 'YOURLS_PRIVATE_INFOS' === true ) {
 		authmgr_require_capability( AuthmgrCapability::ViewStats );
 	}
 }
 
 yourls_add_action( 'api', 'authmgr_intercept_api' );
 function authmgr_intercept_api() {
-	if ( YOURLS_PRIVATE_API === true ) {
-		authmgr_require_capability( AuthmgrCapability::API );
+	if ( 'YOURLS_PRIVATE_API' === true ) {
+		if ( isset( $_REQUEST['shorturl'] ) ) {		
+			authmgr_require_capability( AuthmgrCapability::APIu );
+		} else {
+			authmgr_require_capability( AuthmgrCapability::API );
+		}
 	}
 }
 
@@ -61,6 +57,8 @@ yourls_add_action( 'auth_successful', 'authmgr_intercept_admin' );
  * to add a unique hook for each action, but unfortunately we need to
  * hook the admin page load itself, and try to figure out what action
  * is intended.
+ *
+ * TODO: look for these hooks
  *
  * At this point, reasonably assume that the current request is for
  * a rendering of the admin page.
@@ -129,7 +127,7 @@ function authmgr_intercept_admin() {
 	}
 }
 /* 
- * This is a cosmetic filter that removes disallowed plugins from link list
+ * Cosmetic filter: removes disallowed plugins from link list
 */
 yourls_add_filter( 'admin_sublinks', 'authmgr_admin_sublinks' );
 function authmgr_admin_sublinks( $links ) {
@@ -146,27 +144,28 @@ function authmgr_admin_sublinks( $links ) {
 	return $links;
 }
 
-yourls_add_filter( 'logout_link', 'authmgr_html_append_roles' );
-/**
- * This is a cosmetic filter that makes it possible to see which roles are
- * currently available, just by mousing over the username in the logout link.
+/*
+ * Cosmetic filter: displays currently available roles
+ * by hovering mouse over the username in logout link.
  */
+yourls_add_filter( 'logout_link', 'authmgr_html_append_roles' );
 function authmgr_html_append_roles( $original ) {
 	$authenticated = yourls_is_valid_user();
 	if ( $authenticated === true ) {
-		$listcaps = implode(', ', authmgr_enumerate_current_capabilities());
+		$listcaps = implode(', ', authmgr_current_capabilities());
 		return '<div title="'.$listcaps.'">'.$original.'</div>';
 	} else {
 		return $original;
 	}
 }
 
-/**************** CAPABILITY TEST/ENUMERATION ****************/
+/**************** CAPABILITY TESTING ****************/
 
 /*
  * If capability is not permitted in current context, then abort.
  * This is the most basic way to intercept unauthorized usage.
  */
+// TODO: API responses!
 function authmgr_require_capability( $capability ) {
 	if ( !authmgr_have_capability( $capability ) ) {
 		// If the user can't view admin interface, return a plain error.
@@ -180,163 +179,57 @@ function authmgr_require_capability( $capability ) {
 	}
 }
 
-/*
- * Returns array of capabilities currently available.
- */
-function authmgr_enumerate_current_capabilities() {
-	$current_capabilities = array();
-	$all_capabilities = authmgr_enumerate_all_capabilities();
+// Heart of system
+function authmgr_have_capability( $capability ) {
 
-	foreach ( $all_capabilities as $cap ) {
-		if ( authmgr_have_capability( $cap ) ) {
-			$current_capabilities[] = $cap;
+	global $authmgr_anon_capabilities;
+	global $authmgr_role_capabilities;
+	global $authmgr_admin_ipranges;
+
+	// Make sure the environment has been setup
+	authmgr_env_check();
+
+	// Check anon capabilities
+	$return = in_array( $capability, $authmgr_anon_capabilities );
+
+	// Check user-role based auth
+	if( !$return ) {
+		// Only users have roles.
+		$authenticated = yourls_is_valid_user();
+		if ( $authenticated !== true )
+			return false;
+
+		// List capabilities of particular user role
+		$user_caps = array();
+		foreach ( $authmgr_role_capabilities as $rolename => $rolecaps ) {
+				if ( authmgr_user_has_role( YOURLS_USER, $rolename ) ) {
+						$user_caps = array_merge( $user_caps, $rolecaps );
+				}
 		}
+		$user_caps = array_unique( $user_caps );
+		// Is the requested capability in this list?
+		$return =  in_array( $capability, $user_caps );
 	}
 
-	return $current_capabilities;
-}
-
-function authmgr_enumerate_all_capabilities() {
-	$return = array(
-		AuthmgrCapability::ShowAdmin,
-		AuthmgrCapability::AddURL,
-		AuthmgrCapability::DeleteURL,
-		AuthmgrCapability::EditURL,
-		AuthmgrCapability::ManagePlugins,
-		AuthmgrCapability::API,
-		AuthmgrCapability::ViewStats,
-	);
-	// allow manipulation of this list ( be mindfull of extending the AuthmgrCapability class if needed )
-	yourls_apply_filter( 'authmgr_enumerate_all_capabilities', $return);
+	// Is user connecting from an admin designated IP?
+	if( !$return ) {
+		// the array of ranges: '127.0.0.0/8' will always be admin
+		foreach ($authmgr_admin_ipranges as $range) {
+			$return = authmgr_cidr_match( $_SERVER['REMOTE_ADDR'], $range );
+			if( $return ) 
+				break;
+		}
+	}
 
 	return $return;
 }
 
-/*
- * This is where everything comes together.
- * 
- * Use the "allow" filter chain to see if the requested capability
- * is permitted in the current context. Any function in the filter
- * chain can change the response, but well-behaved functions will
- * only change 'false' to 'true', never the other way around.
- */
-function authmgr_have_capability( $capability ) {
-	return yourls_apply_filter( AUTHMGR_ALLOW, false, $capability);
-}
-
-/******************* FILTERS THAT GRANT CAPABILITIES *****************************/
-/* Whether an action is permitted is decided by running a filter chain. */
-/*********************************************************************************/
-
-/*
- * What capabilities are always available, including anonymous users?
- */
-yourls_add_filter( AUTHMGR_ALLOW, 'authmgr_check_anon_capability', 5 );
-function authmgr_check_anon_capability( $original, $capability ) {
-	global $authmgr_anon_capabilities;
-
-	// Shortcut - trust approval given by earlier filters
-	if ( $original === true ) return true;
-
-	// Make sure the anon rights list has been setup
-	authmgr_env_check();
-
-	// Check list of capabilities that don't require authentication
-	return in_array( $capability, $authmgr_anon_capabilities );
-}
-
-/*
- * What capabilities are available through role assignments to the active user?
- */
-yourls_add_filter( AUTHMGR_ALLOW, 'authmgr_check_user_capability', 10 );
-function authmgr_check_user_capability( $original, $capability ) {
-	global $authmgr_role_capabilities;
-
-	// Shortcut - trust approval given by earlier filters
-	if ( $original === true ) return true;
-
-	// ensure $authmgr_role_capabilities has been set up
-	authmgr_env_check();
-
-	// If the user is not authenticated, then give up because only users have roles.
-	$authenticated = yourls_is_valid_user();
-	if ( $authenticated !== true )
-		return false;
-
-	// Enumerate the capabilities available to this user through roles
-	$user_caps = array();
-
-	foreach ( $authmgr_role_capabilities as $rolename => $rolecaps ) {
-			if ( authmgr_user_has_role( YOURLS_USER, $rolename ) ) {
-					$user_caps = array_merge( $user_caps, $rolecaps );
-			}
-	}
-	$user_caps = array_unique( $user_caps );
-
-	// Is the desired capability in the enumerated list of capabilities?
-	return in_array( $capability, $user_caps );
-}
-
-/*
- * If the user is connecting from an IP address designated for admins,
- * then all capabilities are automatically granted.
- * 
- * By default, only 127.0.0.0/8 (localhost) is an admin range.
- */
-yourls_add_filter( AUTHMGR_ALLOW, 'authmgr_check_admin_ipranges', 15 );
-function authmgr_check_admin_ipranges( $original, $capability ) {
-	global $authmgr_admin_ipranges;
-
-        // Shortcut - trust approval given by earlier filters
-        if ( $original === true ) return true;
-
-        // ensure $authmgr_admin_ipranges is setup
-        authmgr_env_check();
-
-	foreach ($authmgr_admin_ipranges as $range) {
-		if ( authmgr_cidr_match( $_SERVER['REMOTE_ADDR'], $range ) )
-			return true;
-	}
-
-	return $original; // effectively returns false
-}
-
-/*
- * What capabilities are available when making API requests without a username?
- */
-yourls_add_filter( AUTHMGR_ALLOW, 'authmgr_check_apiuser_capability', 15 );
-function authmgr_check_apiuser_capability( $original, $capability ) {
-	// Shortcut - trust approval given by earlier filters
-	if ( $original === true ) return true;
-
-	// In API mode and not using user/path authn? Let it go.
-	if ( yourls_is_API() && !isset($_REQUEST['username']) )
-		return true;
-
-	return $original;
-}
-
-/******************** ROLE TEST AND ENUMERATION ***********************/
-
-/*
- * Determine whether a specific user has a role.
- */
+// Determine whether a specific user has a role.
 function authmgr_user_has_role( $username, $rolename ) {
-	return yourls_apply_filter( AUTHMGR_HASROLE, false, $username, $rolename );
-}
 
-// ******************* FILTERS THAT GRANT ROLE MEMBERSHIP *********************
-// By filtering AUTHMGR_HASROLE, you can connect internal roles to something else.
-// Any filter handlers should execute as quickly as possible.
-
-/*
- * What role memberships are defined for the user in user/config.php?
- */
-yourls_add_filter( AUTHMGR_HASROLE, 'authmgr_user_has_role_in_config');
-function authmgr_user_has_role_in_config( $original, $username, $rolename ) {
 	global $authmgr_role_assignment;
 
-	// if no role assignments are created, grant everything
+	// if no role assignments are created, grant everything FIXME: Make 'admin'
 	// so the site still works even if stuff is configured wrong
 	if ( empty( $authmgr_role_assignment ) )
 		return true;
@@ -353,7 +246,6 @@ function authmgr_user_has_role_in_config( $original, $username, $rolename ) {
 	$users_in_role = $authmgr_role_assignment[$rolename];
 	return in_array( $username, $users_in_role );	
 }
-
 
 /********************* VALIDATE CONFIGURATION ************************/
 
@@ -377,6 +269,7 @@ function authmgr_env_check() {
 				AuthmgrCapability::EditURL,
 				AuthmgrCapability::ManagePlugins,
 				AuthmgrCapability::API,
+				AuthmgrCapability::APIu,
 				AuthmgrCapability::ViewStats,
 			),
 			AuthmgrRoles::Editor => array(
@@ -384,11 +277,13 @@ function authmgr_env_check() {
 				AuthmgrCapability::AddURL,
 				AuthmgrCapability::EditURL,
 				AuthmgrCapability::DeleteURL,
+				AuthmgrCapability::APIu,
 				AuthmgrCapability::ViewStats,
 			),
 			AuthmgrRoles::Contributor => array(
 				AuthmgrCapability::ShowAdmin,
 				AuthmgrCapability::AddURL,
+				AuthmgrCapability::APIu,
 				AuthmgrCapability::ViewStats,
 			),
 		);
@@ -420,7 +315,8 @@ function authmgr_env_check() {
 	$authmgr_role_assignment = $authmgr_role_assignment_lower;
 	unset($authmgr_role_assignment_lower);
 
-	// allow manipulation of env by other plugins ( be mindfull of extending AuthmgrCapability and AuthmgrRoles classes if needed )
+	// allow manipulation of env by other plugins 
+	// be mindfull of extending AuthmgrCapability and AuthmgrRoles classes if needed
 	$a = $authmgr_anon_capabilities;
 	$b = $authmgr_role_capabilities;
 	$c = $authmgr_role_assignment;
@@ -432,12 +328,35 @@ function authmgr_env_check() {
 	return true;
 }
 
-// ***************** GENERAL UTILITY FUNCTIONS ********************
+/***************** HELPER FUNCTIONS ********************/
 
-/*
- * Borrowed from:
- * http://stackoverflow.com/questions/594112/matching-an-ip-to-a-cidr-mask-in-php5
- */
+// List currently available capabilities
+function authmgr_current_capabilities() {
+	$current_capabilities = array();
+	$all_capabilities = array(
+		AuthmgrCapability::ShowAdmin,
+		AuthmgrCapability::AddURL,
+		AuthmgrCapability::DeleteURL,
+		AuthmgrCapability::EditURL,
+		AuthmgrCapability::ManagePlugins,
+		AuthmgrCapability::API,
+		AuthmgrCapability::APIu,
+		AuthmgrCapability::ViewStats,
+	);
+	// allow manipulation of this list ( be mindfull of extending the AuthmgrCapability class if needed )
+	yourls_apply_filter( 'authmgr_current_capabilities', $all_capabilities);
+
+	foreach ( $all_capabilities as $cap ) {
+		if ( authmgr_have_capability( $cap ) ) {
+			$current_capabilities[] = $cap;
+		}
+	}
+
+	return $current_capabilities;
+}
+
+// Check for IP in a range
+// from: http://stackoverflow.com/questions/594112/matching-an-ip-to-a-cidr-mask-in-php5
 function authmgr_cidr_match($ip, $range) {
 	list ($subnet, $bits) = explode('/', $range);
 	$ip = ip2long($ip);
