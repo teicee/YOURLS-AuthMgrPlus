@@ -3,7 +3,7 @@
 Plugin Name: Authorization Manager
 Plugin URI:  https://github.com/nicwaller/yourls-authmgr-plugin
 Description: Restrict classes of users to specific functions
-Version:     0.9.3
+Version:     0.10.0
 Author:      nicwaller
 Author URI:  https://github.com/nicwaller
 */
@@ -81,15 +81,35 @@ function authmgr_intercept_admin() {
 		'activate' => AuthmgrCapability::ManagePlugins,
 		'deactivate' => AuthmgrCapability::ManagePlugins,
 	);
-	// allow manipulation of this list
+	// allow manipulation of this list ( be mindfull of extending Authmgr Capability class if needed )
 	yourls_apply_filter( 'authmgr_action_capability_map', $action_capability_map);
 
-	// intercept requests for plugin management
-	if ( isset( $_REQUEST['plugin'] ) ) {
-		$action_keyword = $_REQUEST['action'];
-		$cap_needed = $action_capability_map[$action_keyword];
-		if ( $cap_needed !== NULL && authmgr_have_capability( $cap_needed ) !== true) {
-			yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
+	// Intercept requests for plugin management
+	if( isset( $_SERVER['REQUEST_URI'] ) && preg_match('/\/admin\/plugins\.php.*/', $_SERVER['REQUEST_URI'] ) ) {
+		// Is this a plugin page request?
+		if ( isset( $_REQUEST['page'] ) ) {
+			// Is this an allowed plugin?
+			global $authmgr_allowed_plugin_pages;
+			if ( authmgr_have_capability( AuthmgrCapability::ManagePlugins ) !== true) {
+				$r = $_REQUEST['page'];
+				if(!in_array($r, $authmgr_allowed_plugin_pages ) ) {
+					yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
+				}
+			}
+		} else {
+		// Should this user touch plugins?
+			if ( authmgr_have_capability( AuthmgrCapability::ManagePlugins ) !== true) {
+				yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
+			}
+		}
+
+		// intercept requests for global plugin management actions
+		if (isset( $_REQUEST['plugin'] ) ) {
+			$action_keyword = $_REQUEST['action'];
+			$cap_needed = $action_capability_map[$action_keyword];
+			if ( $cap_needed !== NULL && authmgr_have_capability( $cap_needed ) !== true) {
+				yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
+			}
 		}
 	}
 
@@ -107,6 +127,23 @@ function authmgr_intercept_admin() {
 			die();
 		}
 	}
+}
+/* 
+ * This is a cosmetic filter that removes disallowed plugins from link list
+*/
+yourls_add_filter( 'admin_sublinks', 'authmgr_admin_sublinks' );
+function authmgr_admin_sublinks( $links ) {
+	
+	global $authmgr_allowed_plugin_pages;
+
+	if ( authmgr_have_capability( AuthmgrCapability::ManagePlugins ) !== true) {
+		foreach( $links['plugins'] as $link => $ar ) {
+			if(!in_array($link, $authmgr_allowed_plugin_pages) )
+				unset($links['plugins'][$link]);
+		}
+	}
+	sort($links['plugins']);
+	return $links;
 }
 
 yourls_add_filter( 'logout_link', 'authmgr_html_append_roles' );
@@ -160,7 +197,7 @@ function authmgr_enumerate_current_capabilities() {
 }
 
 function authmgr_enumerate_all_capabilities() {
-	return array(
+	$return = array(
 		AuthmgrCapability::ShowAdmin,
 		AuthmgrCapability::AddURL,
 		AuthmgrCapability::DeleteURL,
@@ -169,6 +206,10 @@ function authmgr_enumerate_all_capabilities() {
 		AuthmgrCapability::API,
 		AuthmgrCapability::ViewStats,
 	);
+	// allow manipulation of this list ( be mindfull of extending the AuthmgrCapability class if needed )
+	yourls_apply_filter( 'authmgr_enumerate_all_capabilities', $return);
+
+	return $return;
 }
 
 /*
@@ -198,7 +239,7 @@ function authmgr_check_anon_capability( $original, $capability ) {
 	if ( $original === true ) return true;
 
 	// Make sure the anon rights list has been setup
-	authmgr_environment_check();
+	authmgr_env_check();
 
 	// Check list of capabilities that don't require authentication
 	return in_array( $capability, $authmgr_anon_capabilities );
@@ -215,7 +256,7 @@ function authmgr_check_user_capability( $original, $capability ) {
 	if ( $original === true ) return true;
 
 	// ensure $authmgr_role_capabilities has been set up
-	authmgr_environment_check();
+	authmgr_env_check();
 
 	// If the user is not authenticated, then give up because only users have roles.
 	$authenticated = yourls_is_valid_user();
@@ -250,7 +291,7 @@ function authmgr_check_admin_ipranges( $original, $capability ) {
         if ( $original === true ) return true;
 
         // ensure $authmgr_admin_ipranges is setup
-        authmgr_environment_check();
+        authmgr_env_check();
 
 	foreach ($authmgr_admin_ipranges as $range) {
 		if ( authmgr_cidr_match( $_SERVER['REMOTE_ADDR'], $range ) )
@@ -316,10 +357,12 @@ function authmgr_user_has_role_in_config( $original, $username, $rolename ) {
 
 /********************* VALIDATE CONFIGURATION ************************/
 
-function authmgr_environment_check() {
+function authmgr_env_check() {
 	global $authmgr_anon_capabilities;
 	global $authmgr_role_capabilities;
 	global $authmgr_role_assignment;
+	global $authmgr_admin_ipranges;
+	global $authmgr_allowed_plugin_pages;
 
 	if ( !isset( $authmgr_anon_capabilities) ) {
 		$authmgr_anon_capabilities = array();
@@ -355,9 +398,14 @@ function authmgr_environment_check() {
 		$authmgr_role_assignment = array();
 	}
 
-	if ( !isset( $authmgr_iprange_roles ) ) {
+	if ( !isset( $authmgr_admin_ipranges ) ) {
 		$authmgr_admin_ipranges = array(
 			'127.0.0.0/8',
+		);
+	}
+
+	if ( !isset( $authmgr_allowed_plugin_pages ) ) {
+		$authmgr_allowed_plugin_pages = array(
 		);
 	}
 
@@ -372,6 +420,15 @@ function authmgr_environment_check() {
 	$authmgr_role_assignment = $authmgr_role_assignment_lower;
 	unset($authmgr_role_assignment_lower);
 
+	// allow manipulation of env by other plugins ( be mindfull of extending AuthmgrCapability and AuthmgrRoles classes if needed )
+	$a = $authmgr_anon_capabilities;
+	$b = $authmgr_role_capabilities;
+	$c = $authmgr_role_assignment;
+	$d = $authmgr_admin_ipranges;
+	$e = $authmgr_allowed_plugin_pages;
+
+	yourls_apply_filter( 'authmgr_env_check', $a, $b, $c, $d, $e );
+
 	return true;
 }
 
@@ -382,7 +439,7 @@ function authmgr_environment_check() {
  * http://stackoverflow.com/questions/594112/matching-an-ip-to-a-cidr-mask-in-php5
  */
 function authmgr_cidr_match($ip, $range) {
-	list ($subnet, $bits) = split('/', $range);
+	list ($subnet, $bits) = explode('/', $range);
 	$ip = ip2long($ip);
 	$subnet = ip2long($subnet);
 	$mask = -1 << (32 - $bits);
