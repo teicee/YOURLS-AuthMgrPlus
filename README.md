@@ -47,6 +47,13 @@ $authmgr_admin_ipranges = array(
     '127.0.0.0/8',
 );
 ```
+Plugin management and plugin pages are available to admins only by default. Individual pages can be exposed to non-admin roles like so:
+```
+$authmgr_allowed_plugin_pages = array(
+	'sample_page',
+	'another_plugin_slug'
+);
+```
 
 License
 -------
