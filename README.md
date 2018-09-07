@@ -11,6 +11,12 @@ Features
 -  All plugin pages, including main management page, hidden to non-admins by default. Easy to unblock pages.
 -  Plenty of hooks to filter Roles, Role Capabilities, and _any_ of the default data environemnt (such as plugin page visibility)
 -  Fine(r) tuned API access
+-  PHP 7 compatible
+
+Requirements
+------------
+- YOURLS 1.7.2 (1.7.3 ready).
+- If they are isntalled, uninstall nicwaller's `authmgr` and/or Ian Barber's `Seperate Users` plugins.
 
 Installation
 ------------
