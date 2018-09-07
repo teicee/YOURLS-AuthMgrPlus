@@ -82,7 +82,7 @@ function authmgr_intercept_admin() {
 		'deactivate' => AuthmgrCapability::ManagePlugins,
 	);
 	// allow manipulation of this list
-	yourls_apply_filter( authmgr_action_capability_map, $action_capability_map);
+	yourls_apply_filter( 'authmgr_action_capability_map', $action_capability_map);
 
 	// intercept requests for plugin management
 	if ( isset( $_REQUEST['plugin'] ) ) {
