@@ -75,6 +75,6 @@ This is a fork of nicwaller's [Authmgr](https://github.com/nicwaller/yourls-auth
 
 License
 -------
-Copyright 2018 Joshua Panter
-Copyright 2013 Nicholas Waller (code@nicwaller.com)
-Copyright 2011 Ian Barber
+Copyright 2018 Joshua Panter  
+Copyright 2013 Nicholas Waller (code@nicwaller.com)  
+Copyright 2011 Ian Barber  
