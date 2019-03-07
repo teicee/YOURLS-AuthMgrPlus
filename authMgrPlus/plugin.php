@@ -529,7 +529,7 @@ function authMgrPlus_manage_keyword( $keyword, $capability ) {
 	if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ManageUsrsURL ) )
 		return true;
 	// Editor?
-	$owner = authMgrPlus_keyword_owner();
+	$owner = authMgrPlus_keyword_owner($keyword);
 	if ( $owner === null ) {
 		if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ManageAnonURL ) ) {
 			return true;
