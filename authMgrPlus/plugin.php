@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     1.0.3
+Version:     1.0.4
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -13,12 +13,13 @@ if( !defined( 'YOURLS_ABSPATH' ) ) die();
 
 /****************** SET UP CONSTANTS ******************/
 
-class AuthMgrPlusRoles { const Administrator = 'Administrator';
+class ampRoles { 
+	const Administrator = 'Administrator';
 	const Editor        = 'Editor';
 	const Contributor   = 'Contributor';
 }
 
-class AuthMgrPlusCapability {
+class ampCap {
 	const ShowAdmin     = 'ShowAdmin';
 	const AddURL        = 'AddURL';
 	const DeleteURL     = 'DeleteURL';
@@ -34,25 +35,25 @@ class AuthMgrPlusCapability {
 
 /********** Add hooks to intercept functionality in CORE **********/
 
-yourls_add_action( 'load_template_infos', 'authMgrPlus_intercept_stats' );
-function authMgrPlus_intercept_stats() {
+yourls_add_action( 'load_template_infos', 'amp_intercept_stats' );
+function amp_intercept_stats() {
 	if ( 'YOURLS_PRIVATE_INFOS' === true ) {
-		authMgrPlus_require_capability( AuthMgrPlusCapability::ViewStats );
+		amp_require_capability( ampCap::ViewStats );
 	}
 }
 
-yourls_add_action( 'api', 'authMgrPlus_intercept_api' );
-function authMgrPlus_intercept_api() {
+yourls_add_action( 'api', 'amp_intercept_api' );
+function amp_intercept_api() {
 	if ( 'YOURLS_PRIVATE_API' === true ) {
 		if ( isset( $_REQUEST['shorturl'] ) || isset( $_REQUEST['stats'] ) ) {
-			authMgrPlus_require_capability( AuthMgrPlusCapability::APIu );
+			amp_require_capability( ampCap::APIu );
 		} else {
-			authMgrPlus_require_capability( AuthMgrPlusCapability::API );
+			amp_require_capability( ampCap::API );
 		}
 	}
 }
 
-yourls_add_action( 'auth_successful', 'authMgrPlus_intercept_admin' );
+yourls_add_action( 'auth_successful', 'amp_intercept_admin' );
 /**
  * YOURLS processes most actions in the admin page. It would be ideal
  * to add a unique hook for each action, but unfortunately we need to
@@ -64,8 +65,8 @@ yourls_add_action( 'auth_successful', 'authMgrPlus_intercept_admin' );
  * At this point, reasonably assume that the current request is for
  * a rendering of the admin page.
  */
-function authMgrPlus_intercept_admin() {
-	authMgrPlus_require_capability( authMgrPlusCapability::ShowAdmin );
+function amp_intercept_admin() {
+	amp_require_capability( ampCap::ShowAdmin );
 
 	// we use this GET param to send up a feedback notice to user
 	if ( isset( $_GET['access'] ) && $_GET['access']=='denied' ) {
@@ -73,15 +74,15 @@ function authMgrPlus_intercept_admin() {
 	}
 
 	$action_capability_map = array(
-		'add' => AuthMgrPlusCapability::AddURL,
-		'delete' => AuthMgrPlusCapability::DeleteURL,
-		'edit_display' => AuthMgrPlusCapability::EditURL,
-		'edit_save' => AuthMgrPlusCapability::EditURL,
-		'activate' => AuthMgrPlusCapability::ManagePlugins,
-		'deactivate' => AuthMgrPlusCapability::ManagePlugins,
+		'add' => ampCap::AddURL,
+		'delete' => ampCap::DeleteURL,
+		'edit_display' => ampCap::EditURL,
+		'edit_save' => ampCap::EditURL,
+		'activate' => ampCap::ManagePlugins,
+		'deactivate' => ampCap::ManagePlugins,
 	);
 	// allow manipulation of this list ( be mindfull of extending Authmp Capability class if needed )
-	yourls_apply_filter( 'authMgrPlus_action_capability_map', $action_capability_map);
+	yourls_apply_filter( 'amp_action_capability_map', $action_capability_map);
 
 	// Key actions like Add/Edit/Delete are AJAX requests
 	if ( yourls_is_Ajax() ) {
@@ -93,7 +94,7 @@ function authMgrPlus_intercept_admin() {
 		);
 
 		// Allow some flexability with those boundaries
-		yourls_apply_filter( 'AuthMgrPlus_restricted_ajax_actions', $restricted_actions );
+		yourls_apply_filter( 'amp_restricted_ajax_actions', $restricted_actions );
 
 		$action_keyword = $_REQUEST['action'];
 		$cap_needed = $action_capability_map[$action_keyword];
@@ -101,9 +102,9 @@ function authMgrPlus_intercept_admin() {
 		// Check the action against those boundaries
 		if ( in_array( $action_keyword, $restricted_actions) ) {
 			$keyword = $_REQUEST['keyword'];
-			$do = authMgrPlus_manage_keyword( $keyword, $cap_needed );
+			$do = amp_manage_keyword( $keyword, $cap_needed );
 		} else {
-			$do = authMgrPlus_have_capability( $cap_needed );
+			$do = amp_have_capability( $cap_needed );
 		}
 
 		if ( $do !== true ) {
@@ -122,16 +123,16 @@ function authMgrPlus_intercept_admin() {
 		// Is this a plugin page request?
 		if ( isset( $_REQUEST['page'] ) ) {
 			// Is this an allowed plugin?
-			global $authMgrPlus_allowed_plugin_pages;
-			if ( authMgrPlus_have_capability( authMgrPlusCapability::ManagePlugins ) !== true) {
+			global $amp_allowed_plugin_pages;
+			if ( amp_have_capability( ampCap::ManagePlugins ) !== true) {
 				$r = $_REQUEST['page'];
-				if(!in_array($r, $authMgrPlus_allowed_plugin_pages ) ) {
+				if(!in_array($r, $amp_allowed_plugin_pages ) ) {
 					yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
 				}
 			}
 		} else {
 		// Should this user touch plugins?
-			if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ManagePlugins ) !== true) {
+			if ( amp_have_capability( ampCap::ManagePlugins ) !== true) {
 				yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
 			}
 		}
@@ -140,7 +141,7 @@ function authMgrPlus_intercept_admin() {
 		if (isset( $_REQUEST['plugin'] ) ) {
 			$action_keyword = $_REQUEST['action'];
 			$cap_needed = $action_capability_map[$action_keyword];
-			if ( $cap_needed !== NULL && authMgrPlus_have_capability( $cap_needed ) !== true) {
+			if ( $cap_needed !== NULL && amp_have_capability( $cap_needed ) !== true) {
 				yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
 			}
 		}
@@ -150,15 +151,15 @@ function authMgrPlus_intercept_admin() {
  * Cosmetic filter: removes disallowed plugins from link list
 */
 if( yourls_is_admin() ) {
-	yourls_add_filter( 'admin_sublinks', 'authMgrPlus_admin_sublinks' );
+	yourls_add_filter( 'admin_sublinks', 'amp_admin_sublinks' );
 }
-function authMgrPlus_admin_sublinks( $links ) {
+function amp_admin_sublinks( $links ) {
 	
-	global $authMgrPlus_allowed_plugin_pages;
+	global $amp_allowed_plugin_pages;
 
-	if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ManagePlugins ) !== true) {
+	if ( amp_have_capability( ampCap::ManagePlugins ) !== true) {
 		foreach( $links['plugins'] as $link => $ar ) {
-			if(!in_array($link, $authMgrPlus_allowed_plugin_pages) )
+			if(!in_array($link, $amp_allowed_plugin_pages) )
 				unset($links['plugins'][$link]);
 		}
 	}
@@ -170,11 +171,11 @@ function authMgrPlus_admin_sublinks( $links ) {
  * Cosmetic filter: displays currently available roles
  * by hovering mouse over the username in logout link.
  */
-yourls_add_filter( 'logout_link', 'authMgrPlus_html_append_roles' );
-function authMgrPlus_html_append_roles( $original ) {
+yourls_add_filter( 'logout_link', 'amp_html_append_roles' );
+function amp_html_append_roles( $original ) {
 	$authenticated = yourls_is_valid_user();
 	if ( $authenticated === true ) {
-		$listcaps = implode(', ', authMgrPlus_current_capabilities());
+		$listcaps = implode(', ', amp_current_capabilities());
 		return '<div title="'.$listcaps.'">'.$original.'</div>';
 	} else {
 		return $original;
@@ -188,10 +189,10 @@ function authMgrPlus_html_append_roles( $original ) {
  * This is the most basic way to intercept unauthorized usage.
  */
 // TODO: API responses!
-function authMgrPlus_require_capability( $capability ) {
-	if ( !authMgrPlus_have_capability( $capability ) ) {
+function amp_require_capability( $capability ) {
+	if ( !amp_have_capability( $capability ) ) {
 		// If the user can't view admin interface, return a plain error.
-		if ( !authMgrPlus_have_capability( AuthMgrPlusCapability::ShowAdmin ) ) {
+		if ( !amp_have_capability( ampCap::ShowAdmin ) ) {
 		//	header("HTTP/1.0 403 Forbidden");
 			die('Require permissions to show admin interface.');
 		}
@@ -202,17 +203,17 @@ function authMgrPlus_require_capability( $capability ) {
 }
 
 // Heart of system - Can the user do "X"?
-function authMgrPlus_have_capability( $capability ) {
+function amp_have_capability( $capability ) {
 
-	global $authMgrPlus_anon_capabilities;
-	global $authMgrPlus_role_capabilities;
-	global $authMgrPlus_admin_ipranges;
+	global $amp_anon_capabilities;
+	global $amp_role_capabilities;
+	global $amp_admin_ipranges;
 
 	// Make sure the environment has been setup
-	authMgrPlus_env_check();
+	amp_env_check();
 
 	// Check anon capabilities
-	$return = in_array( $capability, $authMgrPlus_anon_capabilities );
+	$return = in_array( $capability, $amp_anon_capabilities );
 
 	// Check user-role based auth
 	if( !$return ) {
@@ -222,9 +223,10 @@ function authMgrPlus_have_capability( $capability ) {
 			return false;
 
 		// List capabilities of particular user role
+		$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
 		$user_caps = array();
-		foreach ( $authMgrPlus_role_capabilities as $rolename => $rolecaps ) {
-				if ( authMgrPlus_user_has_role( YOURLS_USER, $rolename ) ) {
+		foreach ( $amp_role_capabilities as $rolename => $rolecaps ) {
+				if ( amp_user_has_role( $user, $rolename ) ) {
 						$user_caps = array_merge( $user_caps, $rolecaps );
 				}
 		}
@@ -236,8 +238,8 @@ function authMgrPlus_have_capability( $capability ) {
 	// Is user connecting from an admin designated IP?
 	if( !$return ) {
 		// the array of ranges: '127.0.0.0/8' will always be admin
-		foreach ($authMgrPlus_admin_ipranges as $range) {
-			$return = authMgrPlus_cidr_match( $_SERVER['REMOTE_ADDR'], $range );
+		foreach ($amp_admin_ipranges as $range) {
+			$return = amp_cidr_match( $_SERVER['REMOTE_ADDR'], $range );
 			if( $return ) 
 				break;
 		}
@@ -246,13 +248,13 @@ function authMgrPlus_have_capability( $capability ) {
 }
 
 // Determine whether a specific user has a role.
-function authMgrPlus_user_has_role( $username, $rolename ) {
+function amp_user_has_role( $username, $rolename ) {
 
-	global $authMgrPlus_role_assignment;
+	global $amp_role_assignment;
 
 	// if no role assignments are created, grant everything FIXME: Make 'admin'
 	// so the site still works even if stuff is configured wrong
-	if ( empty( $authMgrPlus_role_assignment ) )
+	if ( empty( $amp_role_assignment ) )
 		return true;
 
 	// do this the case-insensitive way
@@ -261,10 +263,10 @@ function authMgrPlus_user_has_role( $username, $rolename ) {
 	$rolename = strtolower($rolename);
 
 	// if the role doesn't exist, give up now.
-	if ( !in_array( $rolename, array_keys( $authMgrPlus_role_assignment ) ) )
+	if ( !in_array( $rolename, array_keys( $amp_role_assignment ) ) )
 		return false;
 
-	$users_in_role = $authMgrPlus_role_assignment[$rolename];
+	$users_in_role = $amp_role_assignment[$rolename];
 	return in_array( $username, $users_in_role );	
 }
 
@@ -272,13 +274,13 @@ function authMgrPlus_user_has_role( $username, $rolename ) {
 
 // Filter out restricted access to keyword data in...
 // Admin list
-yourls_add_filter( 'admin_list_where', 'authMgrPlus_admin_list_where' );
-function authMgrPlus_admin_list_where($where) {
+yourls_add_filter( 'admin_list_where', 'amp_admin_list_where' );
+function amp_admin_list_where($where) {
 
-	if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ViewAll ) )
+	if ( amp_have_capability( ampCap::ViewAll ) )
 		return $where; // Allow admin/editor users to see the lot. 
 
-	$user = YOURLS_USER;
+	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
 	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
 		$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
 		$where['binds']['user'] = $user;
@@ -289,21 +291,21 @@ function authMgrPlus_admin_list_where($where) {
 	return $where;
 }
 // API stats
-yourls_add_filter( 'api_url_stats', 'authMgrPlus_api_url_stats' );
-function authMgrPlus_api_url_stats( $return, $shorturl ) {
+yourls_add_filter( 'api_url_stats', 'amp_api_url_stats' );
+function amp_api_url_stats( $return, $shorturl ) {
 	$keyword = str_replace( YOURLS_SITE . '/' , '', $shorturl ); // accept either 'http://ozh.in/abc' or 'abc'
 	$keyword = yourls_sanitize_string( $keyword );
 	$keyword = addslashes($keyword);
 
-	if(authMgrPlus_access_keyword($keyword))
+	if(amp_access_keyword($keyword))
 		return $return;
 	else
 		return array('simple' => "URL is owned by another user", 'message' => 'URL is owned by another user', 'errorCode' => 403);
 }
 // Info pages
-yourls_add_action( 'pre_yourls_infos', 'authMgrPlus_pre_yourls_infos' );
-function authMgrPlus_pre_yourls_infos( $keyword ) {
-	if( !authMgrPlus_access_keyword($keyword) ) {
+yourls_add_action( 'pre_yourls_infos', 'amp_pre_yourls_infos' );
+function amp_pre_yourls_infos( $keyword ) {
+	if( !amp_access_keyword($keyword) ) {
 		$authenticated = yourls_is_valid_user();
 		if ( $authenticated === true ) 
 				yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
@@ -313,16 +315,16 @@ function authMgrPlus_pre_yourls_infos( $keyword ) {
 }
 
 // DB stats
-yourls_add_filter( 'get_db_stats', 'authMgrPlus_get_db_stats' );
-function authMgrPlus_get_db_stats( $return, $where ) {
+yourls_add_filter( 'get_db_stats', 'amp_get_db_stats' );
+function amp_get_db_stats( $return, $where ) {
 
-	if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ViewAll ) )
+	if ( amp_have_capability( ampCap::ViewAll ) )
 		return $return; // Allow admin/editor users to see the lot. 
 
 	// or... filter results
 	global $ydb;
 	$table_url = YOURLS_DB_TABLE_URL;
-	$user = YOURLS_USER;
+	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
 	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
 		$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
 		$where['binds']['user'] = $user;
@@ -340,95 +342,95 @@ function authMgrPlus_get_db_stats( $return, $where ) {
 
 /********************* HOUSEKEEPING ************************/
 // Validate environment setup
-function authMgrPlus_env_check() {
-	global $authMgrPlus_anon_capabilities;
-	global $authMgrPlus_role_capabilities;
-	global $authMgrPlus_role_assignment;
-	global $authMgrPlus_admin_ipranges;
-	global $authMgrPlus_allowed_plugin_pages;
+function amp_env_check() {
+	global $amp_anon_capabilities;
+	global $amp_role_capabilities;
+	global $amp_role_assignment;
+	global $amp_admin_ipranges;
+	global $amp_allowed_plugin_pages;
 
-	if ( !isset( $authMgrPlus_anon_capabilities) ) {
-		$authMgrPlus_anon_capabilities = array();
+	if ( !isset( $amp_anon_capabilities) ) {
+		$amp_anon_capabilities = array();
 	}
 
-	if ( !isset( $authMgrPlus_role_capabilities) ) {
-		$authMgrPlus_role_capabilities = array(
-			AuthMgrPlusRoles::Administrator => array(
-				AuthMgrPlusCapability::ShowAdmin,
-				AuthMgrPlusCapability::AddURL,
-				AuthMgrPlusCapability::EditURL,
-				AuthMgrPlusCapability::DeleteURL,
-				AuthMgrPlusCapability::ManageAnonURL,
-				AuthMgrPlusCapability::ManageUsrsURL,
-				AuthMgrPlusCapability::ManagePlugins,
-				AuthMgrPlusCapability::API,
-				AuthMgrPlusCapability::APIu,
-				AuthMgrPlusCapability::ViewStats,
-				AuthMgrPlusCapability::ViewAll,
+	if ( !isset( $amp_role_capabilities) ) {
+		$amp_role_capabilities = array(
+			ampRoles::Administrator => array(
+				ampCap::ShowAdmin,
+				ampCap::AddURL,
+				ampCap::EditURL,
+				ampCap::DeleteURL,
+				ampCap::ManageAnonURL,
+				ampCap::ManageUsrsURL,
+				ampCap::ManagePlugins,
+				ampCap::API,
+				ampCap::APIu,
+				ampCap::ViewStats,
+				ampCap::ViewAll,
 			),
-			AuthMgrPlusRoles::Editor => array(
-				AuthMgrPlusCapability::ShowAdmin,
-				AuthMgrPlusCapability::AddURL,
-				AuthMgrPlusCapability::EditURL,
-				AuthMgrPlusCapability::DeleteURL,
-				AuthMgrPlusCapability::ManageAnonURL,
-				AuthMgrPlusCapability::APIu,
-				AuthMgrPlusCapability::ViewStats,
-				AuthMgrPlusCapability::ViewAll,
+			ampRoles::Editor => array(
+				ampCap::ShowAdmin,
+				ampCap::AddURL,
+				ampCap::EditURL,
+				ampCap::DeleteURL,
+				ampCap::ManageAnonURL,
+				ampCap::APIu,
+				ampCap::ViewStats,
+				ampCap::ViewAll,
 			),
-			AuthMgrPlusRoles::Contributor => array(
-				AuthMgrPlusCapability::ShowAdmin,
-				AuthMgrPlusCapability::AddURL,
-				AuthMgrPlusCapability::EditURL,
-				AuthMgrPlusCapability::DeleteURL,
-				AuthMgrPlusCapability::APIu,
-				AuthMgrPlusCapability::ViewStats,
+			ampRoles::Contributor => array(
+				ampCap::ShowAdmin,
+				ampCap::AddURL,
+				ampCap::EditURL,
+				ampCap::DeleteURL,
+				ampCap::APIu,
+				ampCap::ViewStats,
 			),
 		);
 	}
 
-	if ( !isset( $authMgrPlus_role_assignment ) ) {
-		$authMgrPlus_role_assignment = array();
+	if ( !isset( $amp_role_assignment ) ) {
+		$amp_role_assignment = array();
 	}
 
-	if ( !isset( $authMgrPlus_admin_ipranges ) ) {
-		$authMgrPlus_admin_ipranges = array(
+	if ( !isset( $amp_admin_ipranges ) ) {
+		$amp_admin_ipranges = array(
 			'127.0.0.0/8',
 		);
 	}
 
-	if ( !isset( $authMgrPlus_allowed_plugin_pages ) ) {
-		$authMgrPlus_allowed_plugin_pages = array(
+	if ( !isset( $amp_allowed_plugin_pages ) ) {
+		$amp_allowed_plugin_pages = array(
 		);
 	}
 
 	// convert role assignment table to lower case if it hasn't been done already
 	// this makes searches much easier!
-	$authMgrPlus_role_assignment_lower = array();
-	foreach ( $authMgrPlus_role_assignment as $key => $value ) {
+	$amp_role_assignment_lower = array();
+	foreach ( $amp_role_assignment as $key => $value ) {
 		$t_key = strtolower( $key );
 		$t_value = array_map('strtolower', $value);
-		$authMgrPlus_role_assignment_lower[$t_key] = $t_value;
+		$amp_role_assignment_lower[$t_key] = $t_value;
 	}
-	$authMgrPlus_role_assignment = $authMgrPlus_role_assignment_lower;
-	unset($authMgrPlus_role_assignment_lower);
+	$amp_role_assignment = $amp_role_assignment_lower;
+	unset($amp_role_assignment_lower);
 
 	// allow manipulation of env by other plugins 
-	// be mindfull of extending AuthMgrPlusCapability and AuthMgrPlusRoles classes if needed
-	$a = $authMgrPlus_anon_capabilities;
-	$b = $authMgrPlus_role_capabilities;
-	$c = $authMgrPlus_role_assignment;
-	$d = $authMgrPlus_admin_ipranges;
-	$e = $authMgrPlus_allowed_plugin_pages;
+	// be mindfull of extending ampCap and ampRoles classes if needed
+	$a = $amp_anon_capabilities;
+	$b = $amp_role_capabilities;
+	$c = $amp_role_assignment;
+	$d = $amp_admin_ipranges;
+	$e = $amp_allowed_plugin_pages;
 
-	yourls_apply_filter( 'authMgrPlus_env_check', $a, $b, $c, $d, $e );
+	yourls_apply_filter( 'amp_env_check', $a, $b, $c, $d, $e );
 
 	return true;
 }
 
 // Activation: add the user column to the URL table if not added
-yourls_add_action( 'activated_authMgrPlus/plugin.php', 'authMgrPlus_activated' );
-function authMgrPlus_activated() {
+yourls_add_action( 'activated_authMgrPlus/plugin.php', 'amp_activated' );
+function amp_activated() {
 	global $ydb; 
     
 	$table = YOURLS_DB_TABLE_URL;
@@ -460,26 +462,26 @@ function authMgrPlus_activated() {
 /***************** HELPER FUNCTIONS ********************/
 
 // List currently available capabilities
-function authMgrPlus_current_capabilities() {
+function amp_current_capabilities() {
 	$current_capabilities = array();
 	$all_capabilities = array(
-		AuthMgrPlusCapability::ShowAdmin,
-		AuthMgrPlusCapability::AddURL,
-		AuthMgrPlusCapability::EditURL,
-		AuthMgrPlusCapability::DeleteURL,
-		AuthMgrPlusCapability::ManageAnonURL,
-		AuthMgrPlusCapability::ManageUsrsURL,
-		AuthMgrPlusCapability::ManagePlugins,
-		AuthMgrPlusCapability::API,
-		AuthMgrPlusCapability::APIu,
-		AuthMgrPlusCapability::ViewStats,
-		AuthMgrPlusCapability::ViewAll,
+		ampCap::ShowAdmin,
+		ampCap::AddURL,
+		ampCap::EditURL,
+		ampCap::DeleteURL,
+		ampCap::ManageAnonURL,
+		ampCap::ManageUsrsURL,
+		ampCap::ManagePlugins,
+		ampCap::API,
+		ampCap::APIu,
+		ampCap::ViewStats,
+		ampCap::ViewAll,
 	);
-	// allow manipulation of this list ( be mindfull of extending the AuthMgrPlusCapability class if needed )
-	yourls_apply_filter( 'authMgrPlus_current_capabilities', $all_capabilities);
+	// allow manipulation of this list ( be mindfull of extending the ampCap class if needed )
+	yourls_apply_filter( 'amp_current_capabilities', $all_capabilities);
 
 	foreach ( $all_capabilities as $cap ) {
-		if ( authMgrPlus_have_capability( $cap ) ) {
+		if ( amp_have_capability( $cap ) ) {
 			$current_capabilities[] = $cap;
 		}
 	}
@@ -489,7 +491,7 @@ function authMgrPlus_current_capabilities() {
 
 // Check for IP in a range
 // from: http://stackoverflow.com/questions/594112/matching-an-ip-to-a-cidr-mask-in-php5
-function authMgrPlus_cidr_match($ip, $range) {
+function amp_cidr_match($ip, $range) {
 	list ($subnet, $bits) = explode('/', $range);
 	$ip = ip2long($ip);
 	$subnet = ip2long($subnet);
@@ -499,17 +501,14 @@ function authMgrPlus_cidr_match($ip, $range) {
 }
 
 // Check user access to a keyword ( can they see it )
-function authMgrPlus_access_keyword( $keyword ) {
+function amp_access_keyword( $keyword ) {
 	global $ydb; 
 
-	if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ViewAll ) )
+	if ( amp_have_capability( ampCap::ViewAll ) )
 		return true;
 
 	$table = YOURLS_DB_TABLE_URL;
-	$user = null;
-	if(defined( YOURLS_USER ))
-		$user = YOURLS_USER;
-
+	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
 	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
 		$binds = array( 'keyword' => $keyword, 'user' => $user);
 		$sql = "SELECT 1 FROM `$table` WHERE  (`user` IS NULL OR `user` = :user) AND `keyword` = :keyword";
@@ -520,27 +519,27 @@ function authMgrPlus_access_keyword( $keyword ) {
 	return $result > 0;
 }
 // Check user rights to a keyword ( can manage it )
-function authMgrPlus_manage_keyword( $keyword, $capability ) {
+function amp_manage_keyword( $keyword, $capability ) {
 	// only authenticated users can manaage keywords
 	$authenticated = yourls_is_valid_user();
 	if ( $authenticated !== true )
 		return false;
 	// Admin?
-	if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ManageUsrsURL ) )
+	if ( amp_have_capability( ampCap::ManageUsrsURL ) )
 		return true;
 	// Editor?
-	$owner = authMgrPlus_keyword_owner($keyword);
+	$owner = amp_keyword_owner($keyword);
 	if ( $owner === null ) {
-		if ( authMgrPlus_have_capability( AuthMgrPlusCapability::ManageAnonURL ) ) {
+		if ( amp_have_capability( ampCap::ManageAnonURL ) ) {
 			return true;
 		} else {
 			return false;
 		}
 	}
 	// Self Edit?
-	$user = YOURLS_USER;
+	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
 	if ( $owner === $user ) {
-		if ( authMgrPlus_have_capability( $capability ) ) {
+		if ( amp_have_capability( $capability ) ) {
 			return true;
 		} else {
 			return false;
@@ -550,7 +549,7 @@ function authMgrPlus_manage_keyword( $keyword, $capability ) {
 	return false;
 }
 // Check keyword ownership
-function authMgrPlus_keyword_owner( $keyword ) {
+function amp_keyword_owner( $keyword ) {
 	global $ydb; 
 	$table = YOURLS_DB_TABLE_URL;
 
@@ -565,12 +564,12 @@ function authMgrPlus_keyword_owner( $keyword ) {
 }
 
 // Record user info on keyword creation
-yourls_add_action( 'insert_link', 'authMgrPlus_insert_link' );
-function authMgrPlus_insert_link($actions) {
+yourls_add_action( 'insert_link', 'amp_insert_link' );
+function amp_insert_link($actions) {
 	global $ydb; 
 
 	$keyword = $actions[2];
-	$user = YOURLS_USER;
+	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
 	$table = YOURLS_DB_TABLE_URL;
 
 	// Insert $keyword against $username
