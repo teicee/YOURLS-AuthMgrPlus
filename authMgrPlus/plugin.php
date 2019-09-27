@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     1.0.4
+Version:     1.0.5
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -223,7 +223,7 @@ function amp_have_capability( $capability ) {
 			return false;
 
 		// List capabilities of particular user role
-		$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
+		$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
 		$user_caps = array();
 		foreach ( $amp_role_capabilities as $rolename => $rolecaps ) {
 				if ( amp_user_has_role( $user, $rolename ) ) {
@@ -280,7 +280,7 @@ function amp_admin_list_where($where) {
 	if ( amp_have_capability( ampCap::ViewAll ) )
 		return $where; // Allow admin/editor users to see the lot. 
 
-	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
+	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
 	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
 		$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
 		$where['binds']['user'] = $user;
@@ -324,7 +324,7 @@ function amp_get_db_stats( $return, $where ) {
 	// or... filter results
 	global $ydb;
 	$table_url = YOURLS_DB_TABLE_URL;
-	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
+	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
 	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
 		$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
 		$where['binds']['user'] = $user;
@@ -508,7 +508,7 @@ function amp_access_keyword( $keyword ) {
 		return true;
 
 	$table = YOURLS_DB_TABLE_URL;
-	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
+	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
 	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
 		$binds = array( 'keyword' => $keyword, 'user' => $user);
 		$sql = "SELECT 1 FROM `$table` WHERE  (`user` IS NULL OR `user` = :user) AND `keyword` = :keyword";
@@ -537,7 +537,7 @@ function amp_manage_keyword( $keyword, $capability ) {
 		}
 	}
 	// Self Edit?
-	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
+	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
 	if ( $owner === $user ) {
 		if ( amp_have_capability( $capability ) ) {
 			return true;
@@ -569,7 +569,7 @@ function amp_insert_link($actions) {
 	global $ydb; 
 
 	$keyword = $actions[2];
-	$user = defined( YOURLS_USER ) ? YOURLS_USER : NULL;
+	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
 	$table = YOURLS_DB_TABLE_URL;
 
 	// Insert $keyword against $username
