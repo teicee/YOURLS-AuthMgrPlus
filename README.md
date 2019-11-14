@@ -41,7 +41,7 @@ Configuration
 Add role assignments to your `user/config.php` file.
 
 ```
-$authMgrPlus_role_assignment = array(
+$amp_role_assignment = array(
   'administrator' => array(
     'your_username',
   ),
@@ -57,18 +57,18 @@ $authMgrPlus_role_assignment = array(
 You can also designate a range of IP addresses that will automatically be granted all capabilities. By default, all accesses from IPv4 localhost (127.0.0.0/8) are granted full access.
 
 ```
-$authMgrPlus_admin_ipranges = array(
+$amp_admin_ipranges = array(
     '127.0.0.0/8',
 );
 ```
 Plugin management and plugin pages are available to admins only by default. Individual pages can be exposed to non-admin roles like so:
 ```
-$authMgrPlus_allowed_plugin_pages = array(
+$amp_allowed_plugin_pages = array(
 	'sample_page',
 	'another_plugin_slug'
 );
 ```
-Explore the code to see how to set `$authMgrPlus_role_capabilities` and `$authMgrPlus_anon_capabilities`. These are set to defaults in the `authMgrPlus_env_check()` function.
+Explore the code to see how to set `$amp_role_capabilities` and `$amp_anon_capabilities`. These are set to defaults in the `authMgrPlus_env_check()` function.
 
 #### NOTE:
 This is a fork of nicwaller's [Authmgr](https://github.com/nicwaller/yourls-authmgr-plugin) merged with Ian barber's[Seperate User's](https://github.com/joshp23/Yourls-Separate-Users) plugin. Both code bases underwent heavy rewrites, and have been extensively updated and tightly integrated here, resulting in a lean and highly functional user authorization management environment.
