@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     1.0.6
+Version:     2.0.0
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -24,6 +24,7 @@ class ampCap {
 	const AddURL        = 'AddURL';
 	const DeleteURL     = 'DeleteURL';
 	const EditURL       = 'EditURL';
+	const Traceless		= 'Traceless';
 	const ManageAnonURL = 'ManageAnonURL';
 	const ManageUsrsURL = 'ManageUsrsURL';
 	const ManagePlugins = 'ManagePlugins';
@@ -52,8 +53,10 @@ function amp_intercept_api() {
 		}
 	}
 }
+yourls_add_action( 'auth_successful', function() {
+	if( yourls_is_admin() ) amp_intercept_admin();
+} );
 
-yourls_add_action( 'auth_successful', 'amp_intercept_admin' );
 /**
  * YOURLS processes most actions in the admin page. It would be ideal
  * to add a unique hook for each action, but unfortunately we need to
@@ -147,12 +150,12 @@ function amp_intercept_admin() {
 		}
 	}
 }
+
 /* 
  * Cosmetic filter: removes disallowed plugins from link list
 */
-if( yourls_is_admin() ) {
-	yourls_add_filter( 'admin_sublinks', 'amp_admin_sublinks' );
-}
+
+yourls_add_filter( 'admin_sublinks', 'amp_admin_sublinks' );
 function amp_admin_sublinks( $links ) {
 	
 	global $amp_allowed_plugin_pages;
@@ -171,10 +174,10 @@ function amp_admin_sublinks( $links ) {
  * Cosmetic filter: displays currently available roles
  * by hovering mouse over the username in logout link.
  */
+
 yourls_add_filter( 'logout_link', 'amp_html_append_roles' );
 function amp_html_append_roles( $original ) {
-	$authenticated = yourls_is_valid_user();
-	if ( $authenticated === true ) {
+	if ( amp_is_valid_user() ) {
 		$listcaps = implode(', ', amp_current_capabilities());
 		return '<div title="'.$listcaps.'">'.$original.'</div>';
 	} else {
@@ -217,11 +220,9 @@ function amp_have_capability( $capability ) {
 
 	// Check user-role based auth
 	if( !$return ) {
-		// Only users have roles.
-		$authenticated = yourls_is_valid_user();
-		if ( $authenticated !== true )
+		// Only users have roles
+		if ( !amp_is_valid_user() ) //XXX
 			return false;
-
 		// List capabilities of particular user role
 		$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
 		$user_caps = array();
@@ -281,12 +282,8 @@ function amp_admin_list_where($where) {
 		return $where; // Allow admin/editor users to see the lot. 
 
 	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
-	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
-		$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
-		$where['binds']['user'] = $user;
-	}
-	else
-		$where = $where . " AND (`user` = $user OR `user` IS NULL) ";
+	$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
+	$where['binds']['user'] = $user;
 
 	return $where;
 }
@@ -313,9 +310,7 @@ function amp_pre_yourls_infos( $keyword ) {
 
 	if( yourls_is_private() && !amp_access_keyword($keyword) ) {
 
-		$authenticated = yourls_is_valid_user();
-
-		if ( $authenticated === true ) 
+		if ( !amp_is_valid_user() ) 
 			yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
 		else
 			yourls_redirect( YOURLS_SITE, 302 );
@@ -333,21 +328,29 @@ function amp_get_db_stats( $return, $where ) {
 	global $ydb;
 	$table_url = YOURLS_DB_TABLE_URL;
 	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
-	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
-		$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
-		$where['binds']['user'] = $user;
-		$sql = "SELECT COUNT(keyword) as count, SUM(clicks) as sum FROM `$table_url` WHERE 1=1 " . $where['sql'];
-		$binds = $where['binds'];
-		$totals = $ydb->fetchObject($sql, $binds);
-	} else {
-		$where = $where . " AND (`user` = $user OR `user` IS NULL) ";
-		$totals = $ydb->get_results("SELECT COUNT(keyword) as count, SUM(clicks) as sum FROM `$table_url` WHERE 1=1 " . $where );
-	}
+
+	$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
+	$where['binds']['user'] = $user;
+
+	$sql = "SELECT COUNT(keyword) as count, SUM(clicks) as sum FROM `$table_url` WHERE 1=1 " . $where['sql'];
+	$binds = $where['binds'];
+
+	$totals = $ydb->fetchObject($sql, $binds);
+
 	$return = array( 'total_links' => $totals->count, 'total_clicks' => $totals->sum );
 
 	return $return;
 }
 
+// Fine tune track-me-not
+yourls_add_action('redirect_shorturl', 'amp_tracking');
+function amp_tracking( $u, $k ) {
+	if( amp_is_valid_user() && ( amp_keyword_owner($k) || amp_have_capability( ampCap::Traceless ) ) ) {
+		// No logging
+		yourls_add_filter( 'shunt_update_clicks', 	function( $u, $k ) { return true; } );
+		yourls_add_filter( 'shunt_log_redirect', 	function( $u, $k ) { return true; } );
+	}
+}
 /********************* HOUSEKEEPING ************************/
 // Validate environment setup
 function amp_env_check() {
@@ -368,6 +371,7 @@ function amp_env_check() {
 				ampCap::AddURL,
 				ampCap::EditURL,
 				ampCap::DeleteURL,
+				ampCap::Traceless,
 				ampCap::ManageAnonURL,
 				ampCap::ManageUsrsURL,
 				ampCap::ManagePlugins,
@@ -381,6 +385,7 @@ function amp_env_check() {
 				ampCap::AddURL,
 				ampCap::EditURL,
 				ampCap::DeleteURL,
+				ampCap::Traceless,
 				ampCap::ManageAnonURL,
 				ampCap::APIu,
 				ampCap::ViewStats,
@@ -442,14 +447,8 @@ function amp_activated() {
 	global $ydb; 
     
 	$table = YOURLS_DB_TABLE_URL;
-	$version = version_compare(YOURLS_VERSION, '1.7.3') >= 0;
-
-	if ($version) {
-		$sql = "DESCRIBE `$table`";
-		$results = $ydb->fetchObjects($sql);
-	} else {
-		$results = $ydb->get_results("DESCRIBE $table");
-	}
+	$sql = "DESCRIBE `$table`";
+	$results = $ydb->fetchObjects($sql);
 
 	$activated = false;
 	foreach($results as $r) {
@@ -478,6 +477,7 @@ function amp_current_capabilities() {
 		ampCap::AddURL,
 		ampCap::EditURL,
 		ampCap::DeleteURL,
+		ampCap::Traceless,
 		ampCap::ManageAnonURL,
 		ampCap::ManageUsrsURL,
 		ampCap::ManagePlugins,
@@ -511,51 +511,33 @@ function amp_cidr_match($ip, $range) {
 
 // Check user access to a keyword ( can they see it )
 function amp_access_keyword( $keyword ) {
-	global $ydb; 
 
-	if ( amp_have_capability( ampCap::ViewAll ) )
+	$users = array( YOURLS_USER !== false ? YOURLS_USER : NULL , NULL );
+	$owner = amp_keyword_owner( $keyword );
+	if ( amp_have_capability( ampCap::ViewAll ) || in_array( $owner , $users ) )
 		return true;
-
-	$table = YOURLS_DB_TABLE_URL;
-	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
-	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
-		$binds = array( 'keyword' => $keyword, 'user' => $user);
-		$sql = "SELECT 1 FROM `$table` WHERE  (`user` IS NULL OR `user` = :user) AND `keyword` = :keyword";
-		$result = $ydb->fetchAffected($sql, $binds);
-	} else
-		$result = $ydb->query("SELECT 1 FROM `$table` WHERE  (`user` IS NULL OR `user` = $user) AND `keyword` = $keyword");
-
-	return $result > 0;
 }
 
 // Check user rights to a keyword ( can manage it )
 function amp_manage_keyword( $keyword, $capability ) {
 	// only authenticated users can manaage keywords
-	$authenticated = yourls_is_valid_user();
-	if ( $authenticated !== true )
+	if ( !amp_is_valid_user() )
 		return false;
 	// Admin?
 	if ( amp_have_capability( ampCap::ManageUsrsURL ) )
 		return true;
 	// Editor?
 	$owner = amp_keyword_owner($keyword);
-	if ( $owner === null ) {
-		if ( amp_have_capability( ampCap::ManageAnonURL ) ) {
-			return true;
-		} else {
-			return false;
-		}
-	}
+	if ( $owner === null && amp_have_capability( ampCap::ManageAnonURL ) )
+		return true;
+	else
+		return false;
 	// Self Edit?
 	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
-	if ( $owner === $user ) {
-		if ( amp_have_capability( $capability ) ) {
+	if ( $owner === $user && amp_have_capability( $capability ) )
 			return true;
-		} else {
+		else
 			return false;
-		}
-	}
-
 	return false;
 }
 
@@ -563,14 +545,9 @@ function amp_manage_keyword( $keyword, $capability ) {
 function amp_keyword_owner( $keyword ) {
 	global $ydb; 
 	$table = YOURLS_DB_TABLE_URL;
-
-	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
-		$binds = array( 'keyword' => $keyword );
-		$sql = "SELECT * FROM `$table` WHERE `keyword` = :keyword";
-		$result = $ydb->fetchOne($sql, $binds);
-	} else
-		$result = $ydb->query("SELECT 1 FROM `$table` WHERE `keyword` = $keyword");
-
+	$binds = array( 'keyword' => $keyword );
+	$sql = "SELECT * FROM `$table` WHERE `keyword` = :keyword";
+	$result = $ydb->fetchOne($sql, $binds);
 	return $result['user'];
 }
 
@@ -584,13 +561,34 @@ function amp_insert_link($actions) {
 	$table = YOURLS_DB_TABLE_URL;
 
 	// Insert $keyword against $username
-	if (version_compare(YOURLS_VERSION, '1.7.3') >= 0) {
-		$binds = array( 'user' => $user,
-						'keyword' => $keyword);
-		$sql = "UPDATE `$table` SET  `user` = :user WHERE `keyword` = :keyword";
-		$result = $ydb->fetchAffected($sql, $binds);
-	} else {
-		$result = $ydb->query("UPDATE `$table` SET  `user` = $user WHERE `keyword` = $keyword");
+	$binds = array( 'user' => $user,
+					'keyword' => $keyword);
+	$sql = "UPDATE `$table` SET  `user` = :user WHERE `keyword` = :keyword";
+	$result = $ydb->fetchAffected($sql, $binds);
+}
+
+// Quick user validation without triggering hooks
+function amp_is_valid_user() {
+
+	$valid = defined( 'YOURLS_USER' ) ? true : false;
+
+	if ( !$valid ) {
+
+		if ( yourls_is_API() 
+			&& isset( $_REQUEST['timestamp'] ) && !empty($_REQUEST['timestamp'] ) 
+			&& isset( $_REQUEST['signature'] ) && !empty($_REQUEST['signature'] ) )
+			$valid = yourls_check_signature_timestamp();
+		elseif ( yourls_is_API() 
+			&& !isset( $_REQUEST['timestamp'] ) 
+			&& isset( $_REQUEST['signature'] ) && !empty( $_REQUEST['signature'] ) )
+			$valid = yourls_check_signature();
+		elseif ( isset( $_REQUEST['username'] ) && isset( $_REQUEST['password'] )
+			&&  !empty( $_REQUEST['username'] ) && !empty( $_REQUEST['password']  ) )
+			$valid = yourls_check_username_password();
+		elseif ( !yourls_is_API() && isset( $_COOKIE[ yourls_cookie_name() ] ) )
+			$valid = yourls_check_auth_cookie();
 	}
+
+	return $valid;
 }
 ?>

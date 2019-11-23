@@ -7,16 +7,19 @@ Features
 --------
 -  Easily assign users to roles
 -  Easily fine tune role permissions
--  IP based Authentication (optional)
+-  IPv4 based Authentication (optional)
 -  All plugin pages, including main management page, hidden to non-admins by default. Easy to unblock pages.
 -  Plenty of hooks to filter Roles, Role Capabilities, and _any_ of the default data environemnt (such as plugin page visibility)
 -  Fine(r) tuned API access
 -  PHP 7 compatible
+-  No tracking of admins or editors by default
 
 Requirements
 ------------
-- YOURLS 1.7.2 (1.7.3 ready).
-- If they are isntalled, uninstall nicwaller's `authmgr` and/or Ian Barber's `Seperate Users` plugins.
+- YOURLS 1.7.3
+- Incompatable Plugins: 
+	- nicwaller's [`authmgr`](https://github.com/nicwaller/yourls-authmgr-plugin)
+	- Ian Barber's [`Seperate Users`](https://github.com/ianbarber/Yourls-Separate-Users)
 
 Installation
 ------------
@@ -31,9 +34,9 @@ The default roles are set up as follows:
 
 Role          | Capabilities
 --------------|---------------------------------------------------------------------------------------------------
-Administrator | Can manage plugins, no limits
-Editor        | Can add (+API), access own and all others', edit & delete own & anon URL's
-Contributor   | Can add (+API), access own and anon's, and edit & delete own URLs
+Administrator | Can manage plugins, no limits, not tracked on any
+Editor        | Can add (+API), access own and all others', edit & delete own & anon URL's, not tracked on any
+Contributor   | Can add (+API), access own and anon's, and edit & delete own URLs, not tracked on own
 Anonymous     | Can add and access (see stats, etc) anon links (If public)
 
 Configuration
@@ -68,7 +71,7 @@ $amp_allowed_plugin_pages = array(
 	'another_plugin_slug'
 );
 ```
-Explore the code to see how to set `$amp_role_capabilities` and `$amp_anon_capabilities`. These are set to defaults in the `authMgrPlus_env_check()` function.
+Explore the code to see how to set `$amp_role_capabilities` and `$amp_anon_capabilities`. These are set to defaults in the `amp_env_check()` function.
 
 #### NOTE:
 This is a fork of nicwaller's [Authmgr](https://github.com/nicwaller/yourls-authmgr-plugin) merged with Ian barber's[Seperate User's](https://github.com/joshp23/Yourls-Separate-Users) plugin. Both code bases underwent heavy rewrites, and have been extensively updated and tightly integrated here, resulting in a lean and highly functional user authorization management environment.
