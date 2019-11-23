@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     1.0.5
+Version:     1.0.6
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -290,27 +290,35 @@ function amp_admin_list_where($where) {
 
 	return $where;
 }
+
 // API stats
 yourls_add_filter( 'api_url_stats', 'amp_api_url_stats' );
 function amp_api_url_stats( $return, $shorturl ) {
+
 	$keyword = str_replace( YOURLS_SITE . '/' , '', $shorturl ); // accept either 'http://ozh.in/abc' or 'abc'
 	$keyword = yourls_sanitize_string( $keyword );
 	$keyword = addslashes($keyword);
 
-	if(amp_access_keyword($keyword))
-		return $return;
-	else
+	if( ( !defined('YOURLS_PRIVATE_INFOS') || YOURLS_PRIVATE_INFOS !== false ) 
+			&& !amp_access_keyword($keyword) )
 		return array('simple' => "URL is owned by another user", 'message' => 'URL is owned by another user', 'errorCode' => 403);
+
+	else
+		return $return;
 }
+
 // Info pages
 yourls_add_action( 'pre_yourls_infos', 'amp_pre_yourls_infos' );
 function amp_pre_yourls_infos( $keyword ) {
-	if( !amp_access_keyword($keyword) ) {
+
+	if( yourls_is_private() && !amp_access_keyword($keyword) ) {
+
 		$authenticated = yourls_is_valid_user();
+
 		if ( $authenticated === true ) 
-				yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
-			else
-				yourls_redirect( YOURLS_SITE, 302 );
+			yourls_redirect( yourls_admin_url( '?access=denied' ), 302 );
+		else
+			yourls_redirect( YOURLS_SITE, 302 );
 	}
 }
 
@@ -459,6 +467,7 @@ function amp_activated() {
 		}
 	}
 }
+
 /***************** HELPER FUNCTIONS ********************/
 
 // List currently available capabilities
@@ -518,6 +527,7 @@ function amp_access_keyword( $keyword ) {
 
 	return $result > 0;
 }
+
 // Check user rights to a keyword ( can manage it )
 function amp_manage_keyword( $keyword, $capability ) {
 	// only authenticated users can manaage keywords
@@ -548,6 +558,7 @@ function amp_manage_keyword( $keyword, $capability ) {
 
 	return false;
 }
+
 // Check keyword ownership
 function amp_keyword_owner( $keyword ) {
 	global $ydb; 
