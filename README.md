@@ -16,7 +16,7 @@ Features
 
 Requirements
 ------------
-- YOURLS 1.7.3
+- YOURLS 1.7.3 +
 - Incompatable Plugins: 
 	- nicwaller's [`authmgr`](https://github.com/nicwaller/yourls-authmgr-plugin)
 	- Ian Barber's [`Seperate Users`](https://github.com/ianbarber/Yourls-Separate-Users)
