@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     2.1.1
+Version:     2.1.2
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -528,25 +528,17 @@ function amp_access_keyword( $keyword ) {
 
 // Check user rights to a keyword ( can manage it )
 function amp_manage_keyword( $keyword, $capability ) {
-	// only authenticated users can manaage keywords
-	if ( !amp_is_valid_user() )
-		return false;
-	// Admin?
-	if ( amp_have_capability( ampCap::ManageUsrsURL ) )
-		return true;
-	// Editor?
-	$owner = amp_keyword_owner($keyword);
-	if ( $owner === null && amp_have_capability( ampCap::ManageAnonURL ) )
-		return true;
-	else
-		return false;
-	// Self Edit?
-	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
-	if ( $owner === $user && amp_have_capability( $capability ) )
-			return true;
-		else
-			return false;
-	return false;
+	$return = false; 				// default is to deny access
+	if ( amp_is_valid_user() ) { 	// only authenticated users can manaage keywords
+		$owner = amp_keyword_owner($keyword);
+		$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
+		if ( amp_have_capability( ampCap::ManageUsrsURL )							// Admin?
+			|| ( $owner === NULL && amp_have_capability( ampCap::ManageAnonURL ) )	// Editor?
+			|| ( $owner === $user && amp_have_capability( $capability ) ) );		// Self Edit?
+			$return = true;
+	}
+	return $return;
+
 }
 
 // Check keyword ownership
