@@ -73,6 +73,12 @@ $amp_allowed_plugin_pages = array(
 ```
 Explore the code to see how to set `$amp_role_capabilities` and `$amp_anon_capabilities`. These are set to defaults in the `amp_env_check()` function.
 
+You can also assign a default role to all logged-in users that have no explicit role:
+```
+$amp_default_role = "Editor";
+```
+
+
 #### NOTE:
 This is a fork of nicwaller's [Authmgr](https://github.com/nicwaller/yourls-authmgr-plugin) merged with Ian barber's[Seperate User's](https://github.com/joshp23/Yourls-Separate-Users) plugin. Both code bases underwent heavy rewrites, and have been extensively updated and tightly integrated here, resulting in a lean and highly functional user authorization management environment.
 
