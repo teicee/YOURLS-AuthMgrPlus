@@ -219,6 +219,7 @@ function amp_have_capability( $capability ) {
 	global $amp_anon_capabilities;
 	global $amp_role_capabilities;
 	global $amp_admin_ipranges;
+	global $amp_default_role;
 
 	// Make sure the environment has been setup
 	amp_env_check();
@@ -252,6 +253,12 @@ function amp_have_capability( $capability ) {
 			if( $return ) 
 				break;
 		}
+	}
+	if( !$return ) {
+	    if ( isset( $amp_default_role )  && in_array ($amp_default_role, array_keys( $amp_role_capabilities ) ) ) {
+		$default_caps = $amp_role_capabilities [ $amp_default_role ];
+		$return =  in_array( $capability, $default_caps );
+	    }
 	}
 	return $return;
 }
