@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     2.2.0
+Version:     2.2.1
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -462,7 +462,7 @@ function amp_activated() {
 	global $ydb; 
     
 	$table = YOURLS_DB_TABLE_URL;
-	$sql = "DESCRIBE `$table`";
+	$sql = "DESCRIBE `".$table."`";
 	$results = $ydb->fetchObjects($sql);
 
 	$activated = false;
@@ -473,10 +473,10 @@ function amp_activated() {
 	}
 	if(!$activated) {
 		if ($version) {
-			$sql = "ALTER TABLE `$table` ADD `user` VARCHAR(255) NULL";
+			$sql = "ALTER TABLE `".$table."` ADD `user` VARCHAR(255) NULL";
 			$insert = $ydb->fetchAffected($sql);
 		} else {
-			$ydb->query("ALTER TABLE `$table` ADD `user` VARCHAR(255) NULL");
+			$ydb->query("ALTER TABLE `".$table."` ADD `user` VARCHAR(255) NULL");
 
 		}
 	}
