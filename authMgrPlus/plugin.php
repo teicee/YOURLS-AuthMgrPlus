@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     2.2.1
+Version:     2.2.2
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -100,14 +100,13 @@ function amp_intercept_admin() {
 		yourls_apply_filter( 'amp_restricted_ajax_actions', $restricted_actions );
 
 		$action_keyword = $_REQUEST['action'];
-		$cap_needed = $action_capability_map[$action_keyword];
 
 		// Check the action against those boundaries
 		if ( in_array( $action_keyword, $restricted_actions) ) {
 			$keyword = $_REQUEST['keyword'];
-			$do = amp_manage_keyword( $keyword, $cap_needed );
+			$do = amp_manage_keyword( $keyword, $action_capability_map[$action_keyword] );
 		} else {
-			$do = amp_have_capability( $cap_needed );
+			$do = amp_have_capability( $action_capability_map[$action_keyword] );
 		}
 
 		if ( $do !== true ) {
