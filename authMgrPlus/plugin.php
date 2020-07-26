@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     2.2.2
+Version:     2.2.3
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -76,37 +76,36 @@ function amp_intercept_admin() {
 		yourls_add_notice('Access Denied');
 	}
 
-	$action_capability_map = array(
-		'add' => ampCap::AddURL,
-		'delete' => ampCap::DeleteURL,
-		'edit_display' => ampCap::EditURL,
-		'edit_save' => ampCap::EditURL,
-		'activate' => ampCap::ManagePlugins,
-		'deactivate' => ampCap::ManagePlugins,
-	);
-	// allow manipulation of this list ( be mindfull of extending Authmp Capability class if needed )
-	yourls_apply_filter( 'amp_action_capability_map', $action_capability_map);
+	// allow manipulation of this list ( be mindfull of extending Auth mp Capability class if needed )
+	$action_capability_map = yourls_apply_filter( 'amp_action_capability_map',  
+			array(	'add' => ampCap::AddURL,
+					'delete' => ampCap::DeleteURL,
+					'edit_display' => ampCap::EditURL,
+					'edit_save' => ampCap::EditURL,
+					'activate' => ampCap::ManagePlugins,
+					'deactivate' => ampCap::ManagePlugins,
+				) );
 
 	// Key actions like Add/Edit/Delete are AJAX requests
 	if ( yourls_is_Ajax() ) {
 
 		// Define some boundaries for ownership
-		$restricted_actions = array( 'edit_display',
-									'edit_save',
-									'delete'
-		);
-
 		// Allow some flexability with those boundaries
-		yourls_apply_filter( 'amp_restricted_ajax_actions', $restricted_actions );
+		$restricted_actions = yourls_apply_filter( 'amp_restricted_ajax_actions', 
+			array( 	'edit_display',
+					'edit_save',
+					'delete'
+				) );
 
 		$action_keyword = $_REQUEST['action'];
+		$cap_needed = $action_capability_map[$action_keyword];
 
 		// Check the action against those boundaries
 		if ( in_array( $action_keyword, $restricted_actions) ) {
 			$keyword = $_REQUEST['keyword'];
-			$do = amp_manage_keyword( $keyword, $action_capability_map[$action_keyword] );
+			$do = amp_manage_keyword( $keyword, $cap_needed );
 		} else {
-			$do = amp_have_capability( $action_capability_map[$action_keyword] );
+			$do = amp_have_capability( $cap_needed );
 		}
 
 		if ( $do !== true ) {
@@ -442,16 +441,6 @@ function amp_env_check() {
 	$amp_role_assignment = $amp_role_assignment_lower;
 	unset($amp_role_assignment_lower);
 
-	// allow manipulation of env by other plugins 
-	// be mindfull of extending ampCap and ampRoles classes if needed
-	$a = $amp_anon_capabilities;
-	$b = $amp_role_capabilities;
-	$c = $amp_role_assignment;
-	$d = $amp_admin_ipranges;
-	$e = $amp_allowed_plugin_pages;
-
-	yourls_apply_filter( 'amp_env_check', $a, $b, $c, $d, $e );
-
 	return true;
 }
 
@@ -500,16 +489,14 @@ function amp_current_capabilities() {
 		ampCap::ViewStats,
 		ampCap::ViewAll,
 	);
-	// allow manipulation of this list ( be mindfull of extending the ampCap class if needed )
-	yourls_apply_filter( 'amp_current_capabilities', $all_capabilities);
 
 	foreach ( $all_capabilities as $cap ) {
 		if ( amp_have_capability( $cap ) ) {
 			$current_capabilities[] = $cap;
 		}
 	}
-
-	return $current_capabilities;
+	// allow manipulation of this list ( be mindfull of extending the ampCap class if needed )
+	return yourls_apply_filter( 'amp_current_capabilities', $current_capabilities);
 }
 
 // Check for IP in a range
