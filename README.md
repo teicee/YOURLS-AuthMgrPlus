@@ -1,7 +1,7 @@
 YOURLS-AuthMgrPlus
 =====================
 
-This plugin manages essential YOURLS funtions and seperates user data with role-based access controls (RBAC). With access controls enabled, you can safely delegate access to the admin pages and API while keeping link data private. You share an installation, log on, add a link, and nobody else sees it.
+This plugin manages essential YOURLS functions and separates user data with role-based access controls (RBAC). With access controls enabled, you can safely delegate access to the admin pages and API while keeping link data private. You share an installation, log on, add a link, and nobody else sees it.
 
 Features
 --------
@@ -17,13 +17,13 @@ Features
 Requirements
 ------------
 - YOURLS 1.7.3 +
-- Incompatable Plugins: 
+- Incompatible Plugins: 
 	- nicwaller's [`authmgr`](https://github.com/nicwaller/yourls-authmgr-plugin)
 	- Ian Barber's [`Seperate Users`](https://github.com/ianbarber/Yourls-Separate-Users)
 
 Installation
 ------------
-1. Download the [latest release](https://github.com/joshp23/YOURLS-AuthMgrPlus) of ythis plugin.
+1. Download the [latest release](https://github.com/joshp23/YOURLS-AuthMgrPlus) of this plugin.
 1. Copy the `authMgrPlus` folder into your `user/plugins` folder for YOURLS.
 1. Set up some parameters for authMgrPlus (details below)
 1. Activate the plugin with the plugin manager in the YOURLS admin interface.
@@ -80,7 +80,7 @@ $amp_default_role = "Editor";
 
 
 #### NOTE:
-This is a fork of nicwaller's [Authmgr](https://github.com/nicwaller/yourls-authmgr-plugin) merged with Ian barber's[Seperate User's](https://github.com/joshp23/Yourls-Separate-Users) plugin. Both code bases underwent heavy rewrites, and have been extensively updated and tightly integrated here, resulting in a lean and highly functional user authorization management environment.
+This is a fork of nicwaller's [Authmgr](https://github.com/nicwaller/yourls-authmgr-plugin) merged with Ian barber's [Separate Users](https://github.com/joshp23/Yourls-Separate-Users) plugin. Both code bases underwent heavy rewrites, and have been extensively updated and tightly integrated here, resulting in a lean and highly functional user authorization management environment.
 
 ### Support Dev
 All of my published code is developed and maintained in spare time, if you would like to support development of this, or any of my published code, I have set up a Liberpay account for just this purpose. Thank you.
