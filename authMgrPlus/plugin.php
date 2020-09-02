@@ -527,7 +527,7 @@ function amp_manage_keyword( $keyword, $capability ) {
 		$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
 		if ( amp_have_capability( ampCap::ManageUsrsURL )							// Admin?
 			|| ( $owner === NULL && amp_have_capability( ampCap::ManageAnonURL ) )	// Editor?
-			|| ( $owner === $user && amp_have_capability( $capability ) ) );		// Self Edit?
+			|| ( $owner === $user && amp_have_capability( $capability ) ) )			// Self Edit?
 			$return = true;
 	}
 	return $return;
