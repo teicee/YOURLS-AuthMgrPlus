@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     2.2.4
+Version:     2.2.5
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -166,16 +166,12 @@ function amp_admin_sublinks( $links ) {
 	}
 
 	if( empty( $links['plugins'] ) )
-		yourls_add_filter( 'admin_links', 'amp_admin_links' );
-		
-	sort($links['plugins']);
+		unset($links['plugins']);
+	else
+		sort($links['plugins']);
 	return $links;
 }
 
-function amp_admin_links( $links ) {
-	unset($links['plugins']);
-	return $links;
-}
 /*
  * Cosmetic filter: displays currently available roles
  * by hovering mouse over the username in logout link.
