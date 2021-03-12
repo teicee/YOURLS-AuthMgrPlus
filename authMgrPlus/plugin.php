@@ -158,17 +158,20 @@ function amp_admin_sublinks( $links ) {
 	
 	global $amp_allowed_plugin_pages;
 
-	if ( amp_have_capability( ampCap::ManagePlugins ) !== true) {
-		foreach( $links['plugins'] as $link => $ar ) {
-			if(!in_array($link, $amp_allowed_plugin_pages) )
-				unset($links['plugins'][$link]);
-		}
-	}
-
-	if( empty( $links['plugins'] ) )
+	if( empty( $links['plugins'] ) ) {
+	
 		unset($links['plugins']);
-	else
+		
+	} else {
+	
+		if ( amp_have_capability( ampCap::ManagePlugins ) !== true) {
+			foreach( $links['plugins'] as $link => $ar ) {
+				if(!in_array($link, $amp_allowed_plugin_pages) )
+					unset($links['plugins'][$link]);
+			}
+		}
 		sort($links['plugins']);
+	}
 	return $links;
 }
 
