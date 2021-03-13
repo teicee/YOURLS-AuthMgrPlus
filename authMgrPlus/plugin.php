@@ -168,7 +168,7 @@ function amp_ajax_button_check( $actions, $keyword ) {
 	// define restricted buttons
 	$restricted_buttons = array('delete', 'edit');
 	if ( 'YOURLS_PRIVATE_INFOS' === true ) 
-		array_push( $restricted_buttons, 'stats');	
+		$restricted_buttons += ['stats'];	
 				
 	$restricted_buttons = yourls_apply_filter( 'amp_restricted_buttons', $restricted_buttons );
 
