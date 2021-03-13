@@ -535,7 +535,8 @@ function amp_current_capabilities() {
 		}
 	}
 	// allow manipulation of this list ( be mindfull of extending the ampCap class if needed )
-	return yourls_apply_filter( 'amp_current_capabilities', $current_capabilities);
+	$current_capabilities = yourls_apply_filter( 'amp_current_capabilities', $current_capabilities);
+	return $current_capabilities;
 }
 
 // Check for IP in a range
