@@ -11,7 +11,7 @@ Features
 -  All plugin pages, including main management page, hidden to non-admins by default. Easy to unblock pages.
 -  Plenty of hooks to filter Roles, Role Capabilities, and _any_ of the default data environemnt (such as plugin page visibility)
 -  Fine(r) tuned API access
--  PHP 7 compatible
+-  PHP 8 compatible
 -  No tracking of admins or editors by default
 
 Requirements
@@ -73,7 +73,7 @@ $amp_allowed_plugin_pages = array(
 ```
 Explore the code to see how to set `$amp_role_capabilities` and `$amp_anon_capabilities`. These are set to defaults in the `amp_env_check()` function.
 
-You can also assign a default role to all logged-in users that have no explicit role:
+You can also assign a default role to all logged-in users that have no explicit role (note, case sensative):
 ```
 $amp_default_role = "Editor";
 ```

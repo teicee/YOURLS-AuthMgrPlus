@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     2.2.5
+Version:     2.2.6
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -24,6 +24,7 @@ class ampCap {
 	const AddURL        = 'AddURL';
 	const DeleteURL     = 'DeleteURL';
 	const EditURL       = 'EditURL';
+	const ShareURL     	= 'ShareURL';
 	const Traceless		= 'Traceless';
 	const ManageAnonURL = 'ManageAnonURL';
 	const ManageUsrsURL = 'ManageUsrsURL';
@@ -147,6 +148,41 @@ function amp_intercept_admin() {
 			}
 		}
 	}
+}
+
+/* 
+ * Cosmetic filter: removes disallowed buttons from link list per short link
+*/
+
+yourls_add_filter( 'table_add_row_action_array', 'amp_ajax_button_check' );
+function amp_ajax_button_check( $actions, $keyword ) {
+	// define the amp capabilities that map to the buttons
+	$button_cap_map = array('stats' => ampCap::ViewStats,
+							'share' => ampCap::ShareURL,
+							'edit' 	=> ampCap::EditURL,
+							'delete' => ampCap::DeleteURL,
+							);
+
+	$button_cap_map = yourls_apply_filter( 'amp_button_capability_map',  $button_cap_map );
+
+	// define restricted buttons
+	$restricted_buttons = array('delete', 'edit');
+	if ( 'YOURLS_PRIVATE_INFOS' === true ) 
+		array_push( $restricted_buttons, 'stats');	
+				
+	$restricted_buttons = yourls_apply_filter( 'amp_restricted_buttons', $restricted_buttons );
+
+	// unset any disallowed buttons
+	foreach ( $actions as $action => $vars ) {
+		$cap_needed = $button_cap_map[$action];
+		if ( in_array( $action, $restricted_buttons) )
+			$show = amp_manage_keyword( $keyword, $cap_needed );
+		else
+			$show = amp_have_capability( $cap_needed );
+		if (!$show) 
+			unset( $actions[$action] );
+	}
+	return $actions;
 }
 
 /* 
@@ -383,6 +419,7 @@ function amp_env_check() {
 				ampCap::AddURL,
 				ampCap::EditURL,
 				ampCap::DeleteURL,
+				ampCap::ShareURL,
 				ampCap::Traceless,
 				ampCap::ManageAnonURL,
 				ampCap::ManageUsrsURL,
@@ -397,6 +434,7 @@ function amp_env_check() {
 				ampCap::AddURL,
 				ampCap::EditURL,
 				ampCap::DeleteURL,
+				ampCap::ShareURL,
 				ampCap::Traceless,
 				ampCap::ManageAnonURL,
 				ampCap::APIu,
@@ -408,6 +446,7 @@ function amp_env_check() {
 				ampCap::AddURL,
 				ampCap::EditURL,
 				ampCap::DeleteURL,
+				ampCap::ShareURL,
 				ampCap::APIu,
 				ampCap::ViewStats,
 			),
@@ -479,6 +518,7 @@ function amp_current_capabilities() {
 		ampCap::AddURL,
 		ampCap::EditURL,
 		ampCap::DeleteURL,
+		ampCap::ShareURL,
 		ampCap::Traceless,
 		ampCap::ManageAnonURL,
 		ampCap::ManageUsrsURL,
