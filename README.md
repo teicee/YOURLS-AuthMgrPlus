@@ -82,10 +82,8 @@ $amp_default_role = "Editor";
 #### NOTE:
 This is a fork of nicwaller's [Authmgr](https://github.com/nicwaller/yourls-authmgr-plugin) merged with Ian barber's [Separate Users](https://github.com/joshp23/Yourls-Separate-Users) plugin. Both code bases underwent heavy rewrites, and have been extensively updated and tightly integrated here, resulting in a lean and highly functional user authorization management environment.
 
-### Support Dev
-All of my published code is developed and maintained in spare time, if you would like to support development of this, or any of my published code, I have set up a Liberpay account for just this purpose. Thank you.
-
-<noscript><a href="https://liberapay.com/joshu42/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a></noscript>
+### Tips
+Dogecoin: DARhgg9q3HAWYZuN95DKnFonADrSWUimy3
 
 License
 -------
