@@ -624,4 +624,48 @@ function amp_is_valid_user() {
 
 	return $valid;
 }
+
+yourls_add_action( 'html_footer', 'amp_format_table_javascript' );
+
+function amp_format_table_javascript() {
+        echo <<<JS
+
+<script>
+if($("body").hasClass("index")) {
+	document.querySelector("#main_table tfoot th").colSpan = 7;
+	document.querySelector("#nourl_found td").colSpan = 7;
+}
+</script>
+
+JS;
+}
+
+function array_insert($array, $position, $insert_array) {
+	$first_array = array_splice($array, 0, $position);
+	$array = array_merge($first_array, $insert_array, $array);
+
+	return $array;
+}
+
+yourls_add_filter('table_head_cells', 'amp_username_table_head');
+function amp_username_table_head( $cells ) {
+	$user_head = array( 'username' => 'Username' );
+	$cells = array_insert($cells, 5, $user_head);
+	return $cells;
+}
+
+yourls_add_filter('table_add_row_cell_array', 'amp_add_user_row');
+function amp_add_user_row( $cells, $keyword ) {
+	$username = amp_keyword_owner($keyword);
+	$user_cell = array(
+		'username' => array(
+			'template' => '%username%',
+			'username' => $username,
+		)
+	);
+	$cells = array_insert($cells, 5, $user_cell);
+
+	return $cells;
+}
+
 ?>
