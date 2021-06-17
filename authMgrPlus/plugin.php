@@ -3,7 +3,7 @@
 Plugin Name: Auth Manager Plus
 Plugin URI:  https://github.com/joshp23/YOURLS-AuthMgrPlus
 Description: Role Based Access Controlls with seperated user data for authenticated users
-Version:     2.2.6
+Version:     2.2.7
 Author:      Josh Panter, nicwaller, Ian Barber <ian.barber@gmail.com>
 Author URI:  https://unfettered.net
 */
@@ -159,7 +159,7 @@ function amp_ajax_button_check( $actions, $keyword ) {
 	// define the amp capabilities that map to the buttons
 	$button_cap_map = array('stats' => ampCap::ViewStats,
 							'share' => ampCap::ShareURL,
-							'edit' 	=> ampCap::EditURL,
+							'edit' => ampCap::EditURL,
 							'delete' => ampCap::DeleteURL,
 							);
 
@@ -167,8 +167,8 @@ function amp_ajax_button_check( $actions, $keyword ) {
 
 	// define restricted buttons
 	$restricted_buttons = array('delete', 'edit');
-	if ( 'YOURLS_PRIVATE_INFOS' === true ) 
-		$restricted_buttons += ['stats'];	
+	if ( 'YOURLS_PRIVATE_INFOS' === true )
+		$restricted_buttons += ['stats'];
 				
 	$restricted_buttons = yourls_apply_filter( 'amp_restricted_buttons', $restricted_buttons );
 
@@ -590,7 +590,7 @@ function amp_insert_link($actions) {
 	global $ydb; 
 
 	$keyword = $actions[2];
-	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
+	$user = defined(YOURLS_USER) ? YOURLS_USER : NULL;
 	$table = YOURLS_DB_TABLE_URL;
 
 	// Insert $keyword against $username
