@@ -266,7 +266,7 @@ function amp_have_capability( $capability ) {
 		if ( !amp_is_valid_user() ) //XXX
 			return false;
 		// List capabilities of particular user role
-		$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
+		$user = defined('YOURLS_USER') ? YOURLS_USER : NULL;
 		$user_caps = array();
 		foreach ( $amp_role_capabilities as $rolename => $rolecaps ) {
 				if ( amp_user_has_role( $user, $rolename ) ) {
@@ -329,7 +329,7 @@ function amp_admin_list_where($where) {
 	if ( amp_have_capability( ampCap::ViewAll ) )
 		return $where; // Allow admin/editor users to see the lot. 
 
-	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
+	$user = defined('YOURLS_USER') ? YOURLS_USER : NULL;
 	$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
 	$where['binds']['user'] = $user;
 
@@ -375,7 +375,7 @@ function amp_get_db_stats( $return, $where ) {
 	// or... filter results
 	global $ydb;
 	$table_url = YOURLS_DB_TABLE_URL;
-	$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
+	$user = defined('YOURLS_USER') ? YOURLS_USER : NULL;
 
 	$where['sql'] = $where['sql'] . " AND (`user` = :user OR `user` IS NULL) ";
 	$where['binds']['user'] = $user;
@@ -483,7 +483,7 @@ function amp_env_check() {
 }
 
 // Activation: add the user column to the URL table if not added
-yourls_add_action( 'activated_authMgrPlus/plugin.php', 'amp_activated' );
+yourls_add_action('activated_plugin', 'amp_activated');
 function amp_activated() {
 	global $ydb; 
     
@@ -564,7 +564,7 @@ function amp_manage_keyword( $keyword, $capability ) {
 	$return = false; 				// default is to deny access
 	if ( amp_is_valid_user() ) { 	// only authenticated users can manaage keywords
 		$owner = amp_keyword_owner($keyword);
-		$user = YOURLS_USER !== false ? YOURLS_USER : NULL;
+		$user = defined('YOURLS_USER') ? YOURLS_USER : NULL;
 		if ( amp_have_capability( ampCap::ManageUsrsURL )							// Admin?
 			|| ( $owner === NULL && amp_have_capability( ampCap::ManageAnonURL ) )	// Editor?
 			|| ( $owner === $user && amp_have_capability( $capability ) ) )			// Self Edit?
@@ -590,7 +590,7 @@ function amp_insert_link($actions) {
 	global $ydb; 
 
 	$keyword = $actions[2];
-	$user = defined(YOURLS_USER) ? YOURLS_USER : NULL;
+	$user = defined('YOURLS_USER') ? YOURLS_USER : NULL;
 	$table = YOURLS_DB_TABLE_URL;
 
 	// Insert $keyword against $username
