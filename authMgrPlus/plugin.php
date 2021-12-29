@@ -268,11 +268,14 @@ function amp_have_capability( $capability ) {
 		// List capabilities of particular user role
 		$user = defined('YOURLS_USER') ? YOURLS_USER : NULL;
 		$user_caps = array();
-		foreach ( $amp_role_capabilities as $rolename => $rolecaps ) {
-				if ( amp_user_has_role( $user, $rolename ) ) {
-						$user_caps = array_merge( $user_caps, $rolecaps );
-				}
-		}
+		if ( amp_user_is_assigned ( $user ) )
+		    foreach ( $amp_role_capabilities as $rolename => $rolecaps )
+		        if ( amp_user_has_role( $user, $rolename ) )
+				    $user_caps = array_merge( $user_caps, $rolecaps );
+		
+		elseif ( isset( $amp_default_role )  && in_array ($amp_default_role, array_keys( $amp_role_capabilities ) ) )
+		    $user_caps = $amp_role_capabilities [ $amp_default_role ];
+		
 		$user_caps = array_unique( $user_caps );
 		// Is the requested capability in this list?
 		$return =  in_array( $capability, $user_caps );
@@ -287,13 +290,25 @@ function amp_have_capability( $capability ) {
 				break;
 		}
 	}
-	if( !$return ) {
-	    if ( isset( $amp_default_role )  && in_array ($amp_default_role, array_keys( $amp_role_capabilities ) ) ) {
-		$default_caps = $amp_role_capabilities [ $amp_default_role ];
-		$return =  in_array( $capability, $default_caps );
-	    }
-	}
+
 	return $return;
+}
+
+// Determine if a user has been assigned a role
+function amp_user_is_assigned ( $username ) {
+
+    global $amp_role_assignment;
+    if ( empty( $amp_role_assignment ) )
+	    return false;
+	    
+	$return = false;
+	
+    foreach ( $amp_role_assignment as $role )
+        if ( in_array( $username, $role ) ) {
+            $return = true;
+            break;
+        }
+    return $return;
 }
 
 // Determine whether a specific user has a role.

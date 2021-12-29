@@ -27,6 +27,7 @@ Installation
 1. Copy the `authMgrPlus` folder into your `user/plugins` folder for YOURLS.
 1. Set up some parameters for authMgrPlus (details below)
 1. Activate the plugin with the plugin manager in the YOURLS admin interface.
+1. If you have pre-existing links in your database, you will have to manually asign them a user via an sql querry.
 
 Default Roles
 -------------
