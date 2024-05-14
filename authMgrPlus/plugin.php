@@ -268,14 +268,15 @@ function amp_have_capability( $capability ) {
 		// List capabilities of particular user role
 		$user = defined('YOURLS_USER') ? YOURLS_USER : NULL;
 		$user_caps = array();
-		if ( amp_user_is_assigned ( $user ) )
+		if ( amp_user_is_assigned ( $user ) ){
 		    foreach ( $amp_role_capabilities as $rolename => $rolecaps )
 		        if ( amp_user_has_role( $user, $rolename ) )
 				    $user_caps = array_merge( $user_caps, $rolecaps );
+		}
 		
-		elseif ( isset( $amp_default_role )  && in_array ($amp_default_role, array_keys( $amp_role_capabilities ) ) )
+		elseif ( isset( $amp_default_role )  && in_array ($amp_default_role, array_keys( $amp_role_capabilities ) ) ){
 		    $user_caps = $amp_role_capabilities [ $amp_default_role ];
-		
+		}
 		$user_caps = array_unique( $user_caps );
 		// Is the requested capability in this list?
 		$return =  in_array( $capability, $user_caps );
